@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>PMĐ Chat — Screenshot</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; user-select: none; cursor: crosshair; background: black; font-family: system-ui, sans-serif; }
+    #bg { position: fixed; inset: 0; width: 100vw; height: 100vh; object-fit: cover; }
+    #dim { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); pointer-events: none; }
+    #selection {
+      position: fixed; display: none; pointer-events: none;
+      border: 2px solid #f5b042;
+      box-shadow:
+        0 0 0 9999px rgba(0, 0, 0, 0.55),
+        0 0 18px rgba(245, 176, 66, 0.6);
+    }
+    #hint {
+      position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+      background: rgba(10, 9, 8, 0.92);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #f0ede5;
+      padding: 10px 18px; border-radius: 999px;
+      font-size: 13px; font-weight: 500;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      display: flex; align-items: center; gap: 10px;
+    }
+    #hint kbd {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px; border-radius: 4px; font-size: 11px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .brand {
+      position: fixed; bottom: 20px; right: 24px;
+      font-size: 11px; color: rgba(245, 176, 66, 0.7);
+      font-family: 'Courier New', monospace; letter-spacing: 1px;
+    }
+    #dims {
+      position: fixed; display: none;
+      background: rgba(10, 9, 8, 0.9); color: #f5b042;
+      padding: 4px 8px; border-radius: 4px;
+      font-size: 11px; font-family: monospace;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <img id="bg" />
+  <div id="selection"></div>
+  <div id="dims"></div>
+  <div id="hint">
+    Kéo chuột để chọn vùng · <kbd>Esc</kbd> để hủy
+  </div>
+  <div class="brand">PMĐ · v1.0</div>
+
+  <script>
+    const bg = document.getElementById('bg');
+    const selection = document.getElementById('selection');
+    const dims = document.getElementById('dims');
+    const hint = document.getElementById('hint');
+
+    let imgData = null;
+    let imgWidth = 0, imgHeight = 0;
+    let startX = 0, startY = 0;
+    let dragging = false;
+    let selRect = null;
+
+    window.electronAPI.onScreenshotData(({ dataUrl, width, height }) => {
+      imgData = dataUrl;
+      imgWidth = width;
+      imgHeight = height;
+      bg.src = dataUrl;
+    });
+
+    document.addEventListener('mousedown', (e) => {
+      dragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      selection.style.display = 'block';
+      selection.style.left = startX + 'px';
+      selection.style.top = startY + 'px';
+      selection.style.width = '0px';
+      selection.style.height = '0px';
+      hint.style.display = 'none';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const x = Math.min(startX, e.clientX);
+      const y = Math.min(startY, e.clientY);
+      const w = Math.abs(e.clientX - startX);
+      const h = Math.abs(e.clientY - startY);
+      selection.style.left = x + 'px';
+      selection.style.top = y + 'px';
+      selection.style.width = w + 'px';
+      selection.style.height = h + 'px';
+      dims.style.display = 'block';
+      dims.style.left = (x + w + 8) + 'px';
+      dims.style.top = (y + h - 18) + 'px';
+      dims.textContent = `${Math.round(w)} × ${Math.round(h)}`;
+      selRect = { x, y, w, h };
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false;
+      if (!selRect || selRect.w < 5 || selRect.h < 5) {
+        window.electronAPI.cancelScreenshot();
+        return;
+      }
+      const scaleX = imgWidth / window.innerWidth;
+      const scaleY = imgHeight / window.innerHeight;
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(selRect.w * scaleX);
+      canvas.height = Math.round(selRect.h * scaleY);
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(
+          img,
+          selRect.x * scaleX, selRect.y * scaleY,
+          selRect.w * scaleX, selRect.h * scaleY,
+          0, 0, canvas.width, canvas.height
+        );
+        const cropped = canvas.toDataURL('image/png');
+        window.electronAPI.screenshotResult(cropped);
+      };
+      img.onerror = () => window.electronAPI.cancelScreenshot();
+      img.src = imgData;
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') window.electronAPI.cancelScreenshot();
+    });
+  </script>
+</body>
+</html>

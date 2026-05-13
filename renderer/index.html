@@ -1,0 +1,2065 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PMĐ Chat — by Phan Minh Đức</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.10.0/build/styles/atom-one-dark.min.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="config.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
+            display: ['"Instrument Serif"', 'serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            ink: {
+              950: '#0a0908', 900: '#161412', 800: '#1f1d1a',
+              700: '#2b2823', 600: '#3a3631', 500: '#5c574f',
+              400: '#8a857a', 300: '#b8b3a7', 200: '#dcd8cf', 100: '#f0ede5',
+            },
+            'amber-glow': 'rgb(var(--accent-rgb) / <alpha-value>)',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    html, body, #root {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent !important;
+      overflow: hidden;
+      color: #f0ede5;
+      font-family: 'DM Sans', system-ui, sans-serif;
+      user-select: none;
+    }
+
+    /* ═══ Theme CSS variables ═══ */
+    :root {
+      --accent-rgb: 245 176 66;
+      --bg-from: 31 29 26;
+      --bg-to: 22 20 18;
+      --bubble-1: #f5b042;
+      --bubble-2: #d9842a;
+      --bubble-3: #a85b1a;
+    }
+    body[data-theme="sakura"] {
+      --accent-rgb: 244 114 182;
+      --bg-from: 40 22 32;
+      --bg-to: 28 16 24;
+      --bubble-1: #f472b6;
+      --bubble-2: #db2777;
+      --bubble-3: #831843;
+    }
+    body[data-theme="cyberpunk"] {
+      --accent-rgb: 167 139 250;
+      --bg-from: 15 8 30;
+      --bg-to: 10 5 22;
+      --bubble-1: #a78bfa;
+      --bubble-2: #7c3aed;
+      --bubble-3: #4c1d95;
+    }
+    body[data-theme="forest"] {
+      --accent-rgb: 132 204 22;
+      --bg-from: 18 26 16;
+      --bg-to: 12 20 12;
+      --bubble-1: #a3e635;
+      --bubble-2: #65a30d;
+      --bubble-3: #365314;
+    }
+    body[data-theme="mocha"] {
+      --accent-rgb: 217 119 6;
+      --bg-from: 40 26 18;
+      --bg-to: 26 16 10;
+      --bubble-1: #fbbf24;
+      --bubble-2: #b45309;
+      --bubble-3: #5c2c08;
+    }
+    body[data-theme="ocean"] {
+      --accent-rgb: 6 182 212;
+      --bg-from: 12 26 32;
+      --bg-to: 8 18 24;
+      --bubble-1: #22d3ee;
+      --bubble-2: #0891b2;
+      --bubble-3: #155e75;
+    }
+    /* Selectable text inside chat messages */
+    input, textarea, .selectable, .selectable * { user-select: text; }
+
+    .glass-panel {
+      background: linear-gradient(155deg, rgb(var(--bg-from) / 0.985) 0%, rgb(var(--bg-to) / 1) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .glass-bubble {
+      background: radial-gradient(circle at 30% 30%, var(--bubble-1) 0%, var(--bubble-2) 60%, var(--bubble-3) 100%);
+      box-shadow:
+        0 12px 40px -8px rgb(var(--accent-rgb) / 0.55),
+        0 0 0 1px rgba(255, 255, 255, 0.12) inset,
+        0 -10px 20px -5px rgba(255, 255, 255, 0.18) inset;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+    .typing-dots span {
+      display: inline-block; width: 6px; height: 6px;
+      background: rgb(var(--accent-rgb)); border-radius: 50%; margin: 0 1px;
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+    .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+    .bubble-pop { animation: bubblePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    @keyframes bubblePop {
+      0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+      100% { transform: scale(1) rotate(0); opacity: 1; }
+    }
+    .panel-pop { animation: panelPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); transform-origin: bottom right; }
+    @keyframes panelPop {
+      0% { transform: scale(0.92) translateY(20px); opacity: 0; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    .slide-in-left { animation: slideInLeft 0.25s ease-out; }
+    @keyframes slideInLeft { 0% { transform: translateX(-100%); } 100% { transform: translateX(0); } }
+    .fade-in { animation: fadeIn 0.2s ease-out; }
+    @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+    .ring-spin { animation: spin 2s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .pulse-ring { animation: pulseRing 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulseRing {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+    }
+    .md { font-size: 14px; line-height: 1.65; }
+    .md p { margin: 0.5em 0; }
+    .md p:first-child { margin-top: 0; }
+    .md p:last-child { margin-bottom: 0; }
+    .md h1, .md h2, .md h3 {
+      font-family: 'Instrument Serif', serif;
+      font-weight: 400; margin: 0.7em 0 0.3em; line-height: 1.3;
+    }
+    .md h1 { font-size: 1.4em; } .md h2 { font-size: 1.25em; } .md h3 { font-size: 1.1em; }
+    .md code:not(pre code) {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.87em;
+      background: rgb(var(--accent-rgb) / 0.12); color: rgb(var(--accent-rgb));
+      padding: 0.1em 0.35em; border-radius: 4px;
+    }
+    .md pre {
+      background: rgba(0,0,0,0.5) !important;
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 8px; padding: 0.85em 1em;
+      overflow-x: auto; margin: 0.6em 0; font-size: 13px;
+    }
+    .md pre code { font-family: 'JetBrains Mono', monospace; background: transparent !important; padding: 0 !important; }
+    .md ul, .md ol { padding-left: 1.4em; margin: 0.4em 0; }
+    .md li { margin: 0.2em 0; }
+    .md a { color: rgb(var(--accent-rgb)); text-decoration: underline; text-underline-offset: 2px; }
+    .md blockquote { border-left: 2px solid rgb(var(--accent-rgb)); padding-left: 0.8em; margin: 0.6em 0; color: #b8b3a7; font-style: italic; }
+    .md strong { color: #f0ede5; font-weight: 600; }
+    .md table { border-collapse: collapse; margin: 0.6em 0; font-size: 13px; }
+    .md th, .md td { border: 1px solid rgba(255,255,255,0.1); padding: 0.4em 0.8em; }
+    .md th { background: rgba(255,255,255,0.04); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="module">
+    import React, { useState, useEffect, useRef, useCallback } from 'https://esm.sh/react@18';
+    import ReactDOM from 'https://esm.sh/react-dom@18/client';
+    import { marked } from 'https://esm.sh/marked@4';
+    import hljs from 'https://esm.sh/highlight.js@11.10.0';
+
+    const h = React.createElement;
+    const electron = window.electronAPI;
+    const isElectron = !!electron?.isElectron;
+
+    marked.setOptions({
+      highlight: (code, lang) => {
+        try {
+          if (lang && hljs.getLanguage(lang)) return hljs.highlight(code, { language: lang }).value;
+          return hljs.highlightAuto(code).value;
+        } catch { return code; }
+      },
+      breaks: true, gfm: true,
+    });
+    const renderMd = (text) => marked.parse(text || '');
+
+    const STORAGE_KEY = 'floating-chat-electron-v1';
+    const loadState = () => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; } };
+    const saveState = (s) => { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch {} };
+    const uid = () => Math.random().toString(36).slice(2, 10);
+
+    // Merge embedded default config (from config.js) with stored state
+    const DEFAULT = window.DEFAULT_CONFIG || { apiKeys: { gemini: '', groq: '', openrouter: '' }, provider: 'gemini', model: 'gemini-2.5-flash' };
+    function getInitialState() {
+      const stored = loadState();
+      // Migrate old 'Hà Nội' default to 'Đà Nẵng'
+      if (stored.weatherCity === 'Hà Nội') stored.weatherCity = 'Đà Nẵng';
+      return {
+        ...stored,
+        apiKeys: {
+          gemini: stored.apiKeys?.gemini || DEFAULT.apiKeys.gemini || '',
+          groq: stored.apiKeys?.groq || DEFAULT.apiKeys.groq || '',
+          openrouter: stored.apiKeys?.openrouter || DEFAULT.apiKeys.openrouter || '',
+        },
+        provider: stored.provider || DEFAULT.provider,
+        model: stored.model || DEFAULT.model,
+      };
+    }
+
+    const PROVIDERS = {
+      gemini: {
+        name: 'Gemini',
+        models: [
+          { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (1M context)' },
+          { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+          { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+        ],
+        keyUrl: 'https://aistudio.google.com/apikey',
+      },
+      groq: {
+        name: 'Groq',
+        models: [
+          { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B' },
+          { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B (instant)' },
+        ],
+        keyUrl: 'https://console.groq.com/keys',
+      },
+      openrouter: {
+        name: 'OpenRouter',
+        models: [
+          { id: 'deepseek/deepseek-chat-v3-0324:free', label: 'DeepSeek V3 (free)' },
+          { id: 'meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 70B (free)' },
+          { id: 'qwen/qwen-2.5-72b-instruct:free', label: 'Qwen 2.5 72B (free)' },
+          { id: 'google/gemini-2.0-flash-exp:free', label: 'Gemini 2.0 Flash (free)' },
+        ],
+        keyUrl: 'https://openrouter.ai/keys',
+      },
+    };
+
+    const PERSONAS = [
+      { id: 'default', name: 'Trợ lý', emoji: '✨', desc: 'Trợ lý AI đa năng',
+        sys: 'Bạn là trợ lý AI thông minh, thân thiện và hữu ích. Trả lời ngắn gọn nhưng đầy đủ. Hỗ trợ tiếng Việt tự nhiên. Khi cần code, dùng markdown code block với ngôn ngữ chỉ định.' },
+      { id: 'translator', name: 'Dịch giả', emoji: '🌐', desc: 'Dịch Việt ↔ Anh tự nhiên',
+        sys: 'Bạn là dịch giả chuyên nghiệp. Tự động phát hiện ngôn ngữ và dịch Việt↔Anh tự nhiên. Chỉ trả về bản dịch, không giải thích trừ khi được hỏi.' },
+      { id: 'writer', name: 'Biên tập', emoji: '✍️', desc: 'Sửa văn, viết lại, tóm tắt',
+        sys: 'Bạn là biên tập viên giỏi tiếng Việt và Anh. Sửa chính tả, ngữ pháp, dấu câu, đề xuất cách viết tự nhiên hơn. Khi viết lại, đưa ra 2-3 phương án tone khác nhau.' },
+      { id: 'coder', name: 'Lập trình viên', emoji: '💻', desc: 'Hỗ trợ code, debug',
+        sys: 'Bạn là senior software engineer. Viết code rõ ràng, có comment khi cần. Giải thích ngắn gọn approach. Đề xuất edge cases. Ưu tiên giải pháp đơn giản, dễ maintain.' },
+      { id: 'friend', name: 'Bạn nói chuyện', emoji: '☕', desc: 'Trò chuyện thoải mái',
+        sys: 'Bạn là một người bạn thân thiện, biết lắng nghe. Nói chuyện tự nhiên, dùng từ ngữ đời thường. Có thể đùa nhẹ, đồng cảm khi chia sẻ. Tránh lên lớp, tránh dài dòng.' },
+      { id: 'tutor', name: 'Tutor tiếng Anh', emoji: '📚', desc: 'Học tiếng Anh',
+        sys: 'Bạn là giáo viên tiếng Anh kiên nhẫn cho người Việt. Sửa lỗi nhẹ nhàng, giải thích bằng tiếng Việt. Cho ví dụ, từ đồng nghĩa khi hỏi nghĩa từ. Luôn khuyến khích.' },
+    ];
+
+    const COMMANDS = [
+      { cmd: '/dịch', label: 'Dịch', desc: 'Dịch Việt ↔ Anh tự động',
+        transform: t => `Tự động phát hiện ngôn ngữ và dịch văn bản sau. Chỉ trả về bản dịch:\n\n${t}` },
+      { cmd: '/tóm', label: 'Tóm tắt', desc: 'Tóm tắt văn bản',
+        transform: t => `Tóm tắt văn bản sau thành 3-5 gạch đầu dòng ngắn gọn:\n\n${t}` },
+      { cmd: '/giải thích', label: 'Giải thích', desc: 'Giải thích dễ hiểu',
+        transform: t => `Giải thích nội dung sau bằng từ ngữ đơn giản, kèm ví dụ nếu cần:\n\n${t}` },
+      { cmd: '/sửa', label: 'Sửa lỗi', desc: 'Sửa chính tả, ngữ pháp',
+        transform: t => `Sửa lỗi chính tả, ngữ pháp, dấu câu. Giữ nguyên ý và giọng văn. Chỉ trả về bản đã sửa:\n\n${t}` },
+      { cmd: '/viết lại', label: 'Viết lại', desc: '3 phương án khác tone',
+        transform: t => `Viết lại văn bản sau theo 3 tone khác nhau: (1) formal, (2) casual, (3) ngắn gọn. Đánh số rõ ràng:\n\n${t}` },
+      { cmd: '/code', label: 'Code', desc: 'Trợ giúp lập trình',
+        transform: t => `Là senior dev, giúp tôi với yêu cầu code sau:\n\n${t}` },
+      { cmd: '/ảnh', label: 'Tạo ảnh', desc: 'Tạo ảnh AI (Pollinations, free)',
+        transform: t => t, special: 'image-gen' },
+    ];
+
+    const parseCommand = (input) => {
+      const trimmed = input.trimStart();
+      for (const c of COMMANDS) {
+        const lower = c.cmd.toLowerCase();
+        if (trimmed.toLowerCase().startsWith(lower + ' ')) {
+          const rest = trimmed.slice(c.cmd.length + 1).trim();
+          if (rest) return { command: c, text: rest, transformed: c.transform(rest) };
+        }
+      }
+      return null;
+    };
+    const matchCommands = (input) => {
+      const trimmed = input.trimStart();
+      if (!trimmed.startsWith('/')) return [];
+      const q = trimmed.toLowerCase().split(' ')[0];
+      return COMMANDS.filter(c => c.cmd.toLowerCase().startsWith(q));
+    };
+
+    // ── Template matching (@-autocomplete) ──
+    const matchTemplates = (input, templates) => {
+      const lastAt = input.lastIndexOf('@');
+      if (lastAt === -1) return { matches: [], query: '', startIdx: -1 };
+      const after = input.slice(lastAt + 1);
+      if (/\s/.test(after)) return { matches: [], query: '', startIdx: -1 };
+      const q = after.toLowerCase();
+      const matches = templates.filter(t => t.name.toLowerCase().startsWith(q));
+      return { matches, query: after, startIdx: lastAt };
+    };
+
+    // ── Image generation via Pollinations (free, no API key) ──
+    async function generateImage(prompt) {
+      const seed = Math.floor(Math.random() * 1000000);
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${seed}&nologo=true`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Tạo ảnh thất bại (${res.status})`);
+      const blob = await res.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result;
+          resolve({
+            id: uid(),
+            dataUrl,
+            base64: dataUrl.split(',')[1],
+            mimeType: blob.type || 'image/jpeg',
+            name: `pmd-gen-${Date.now()}.jpg`,
+          });
+        };
+        reader.onerror = () => reject(new Error('Đọc ảnh lỗi'));
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function* parseSSE(res, extractText) {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          const t = line.trim();
+          if (!t.startsWith('data:')) continue;
+          const data = t.slice(5).trim();
+          if (!data) continue;
+          const text = extractText(data);
+          if (text === null) return;
+          if (text) yield text;
+        }
+      }
+    }
+
+    async function* streamGemini({ model, apiKey, systemPrompt, messages, signal, useWebSearch }) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+      const contents = messages.map(m => {
+        const parts = [];
+        if (m.attachments?.length) {
+          for (const a of m.attachments) {
+            parts.push({ inline_data: { mime_type: a.mimeType, data: a.base64 || (a.dataUrl && a.dataUrl.split(',')[1]) || '' } });
+          }
+        }
+        if (m.content) parts.push({ text: m.content });
+        if (parts.length === 0) parts.push({ text: '' });
+        return { role: m.role === 'assistant' ? 'model' : 'user', parts };
+      });
+      const body = { contents, generationConfig: { temperature: 0.7, maxOutputTokens: 8192 } };
+      if (systemPrompt?.trim()) body.systemInstruction = { parts: [{ text: systemPrompt }] };
+      if (useWebSearch) body.tools = [{ google_search: {} }];
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal,
+      });
+      if (!res.ok) throw new Error(`Gemini (${res.status}): ${(await res.text()).slice(0, 200)}`);
+
+      // Inline SSE parse so we can also capture grounding metadata
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let grounding = null;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          const t = line.trim();
+          if (!t.startsWith('data:')) continue;
+          const data = t.slice(5).trim();
+          if (!data) continue;
+          try {
+            const parsed = JSON.parse(data);
+            const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) yield text;
+            const gm = parsed?.candidates?.[0]?.groundingMetadata;
+            if (gm) {
+              grounding = {
+                chunks: gm.groundingChunks || [],
+                queries: gm.webSearchQueries || [],
+              };
+            }
+          } catch {}
+        }
+      }
+      if (grounding) yield { _grounding: grounding };
+    }
+
+    async function* streamOpenAI({ provider, model, apiKey, systemPrompt, messages, signal }) {
+      const url = provider === 'groq'
+        ? 'https://api.groq.com/openai/v1/chat/completions'
+        : 'https://openrouter.ai/api/v1/chat/completions';
+      const oaiMessages = [];
+      if (systemPrompt?.trim()) oaiMessages.push({ role: 'system', content: systemPrompt });
+      for (const m of messages) {
+        if (m.attachments?.length && m.role === 'user') {
+          oaiMessages.push({
+            role: m.role,
+            content: [
+              ...(m.content ? [{ type: 'text', text: m.content }] : []),
+              ...m.attachments.map(a => ({
+                type: 'image_url',
+                image_url: { url: a.dataUrl || `data:${a.mimeType};base64,${a.base64}` },
+              })),
+            ],
+          });
+        } else {
+          oaiMessages.push({ role: m.role, content: m.content });
+        }
+      }
+      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` };
+      if (provider === 'openrouter') {
+        headers['HTTP-Referer'] = 'https://floating-ai-chat.local';
+        headers['X-Title'] = 'Floating AI Chat';
+      }
+      const res = await fetch(url, {
+        method: 'POST', headers,
+        body: JSON.stringify({ model, messages: oaiMessages, stream: true, temperature: 0.7 }),
+        signal,
+      });
+      if (!res.ok) throw new Error(`${provider} (${res.status}): ${(await res.text()).slice(0, 200)}`);
+      yield* parseSSE(res, data => {
+        if (data === '[DONE]') return null;
+        try {
+          const p = JSON.parse(data);
+          return p?.choices?.[0]?.delta?.content || '';
+        } catch { return ''; }
+      });
+    }
+
+    async function* streamChat(opts) {
+      if (!opts.apiKey) throw new Error(`Chưa có API key cho ${PROVIDERS[opts.provider].name}. Mở Cài đặt.`);
+      if (opts.provider === 'gemini') yield* streamGemini(opts);
+      else {
+        if (opts.useWebSearch) {
+          // Web search chỉ hoạt động với Gemini (Google Grounding). Chuyển sang Gemini hoặc tắt search.
+        }
+        yield* streamOpenAI(opts);
+      }
+    }
+
+    // ── Icons ──
+    const svg = (path, w = 16) => h('svg', { width: w, height: w, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' },
+      Array.isArray(path) ? path.map((d, i) => h('path', { d, key: i })) : h('path', { d: path }));
+    const I = {
+      sparkles: h('svg', { width: 28, height: 28, viewBox: '0 0 24 24', fill: 'currentColor' },
+        h('path', { d: 'M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z' })),
+      close: svg('M18 6L6 18M6 6l12 12'),
+      plus: svg('M12 5v14M5 12h14'),
+      settings: h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 },
+        h('circle', { cx: 12, cy: 12, r: 3 }),
+        h('path', { d: 'M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z' })),
+      history: h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' },
+        h('path', { d: 'M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8' }),
+        h('path', { d: 'M3 3v5h5' }),
+        h('path', { d: 'M12 7v5l4 2' })),
+      chevDown: svg('M6 9l6 6 6-6'),
+      send: h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'currentColor' },
+        h('path', { d: 'M2 21l21-9L2 3v7l15 2-15 2v7z' })),
+      stop: h('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'currentColor' },
+        h('rect', { x: 6, y: 6, width: 12, height: 12, rx: 1 })),
+      mic: h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' },
+        h('path', { d: 'M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z' }),
+        h('path', { d: 'M19 10v2a7 7 0 01-14 0v-2' }),
+        h('line', { x1: 12, y1: 19, x2: 12, y2: 23 }),
+        h('line', { x1: 8, y1: 23, x2: 16, y2: 23 })),
+      copy: svg(['M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2', 'M9 2h6a1 1 0 011 1v2a1 1 0 01-1 1H9a1 1 0 01-1-1V3a1 1 0 011-1z']),
+      check: svg('M20 6L9 17l-5-5'),
+      trash: svg(['M3 6h18', 'M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2'], 14),
+      message: svg('M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z', 14),
+      key: svg('M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4', 14),
+      cpu: h('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 },
+        h('rect', { x: 4, y: 4, width: 16, height: 16, rx: 2 }),
+        h('rect', { x: 9, y: 9, width: 6, height: 6 })),
+      brain: svg('M9.5 2A2.5 2.5 0 0112 4.5v15a2.5 2.5 0 11-5 0V18a3.5 3.5 0 01-3.5-3.5V14a2.5 2.5 0 010-5h.5A2.5 2.5 0 016 6.5V6a2.5 2.5 0 012.5-2.5h1zm5 0A2.5 2.5 0 0112 4.5v15a2.5 2.5 0 105 0V18a3.5 3.5 0 003.5-3.5V14a2.5 2.5 0 000-5h-.5A2.5 2.5 0 0018 6.5V6a2.5 2.5 0 00-2.5-2.5h-1z', 14),
+      external: svg(['M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6', 'M15 3h6v6', 'M10 14L21 3'], 10),
+      eye: svg(['M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z']),
+      eyeOff: svg(['M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24', 'M1 1l22 22']),
+      warning: svg(['M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z', 'M12 9v4', 'M12 17h.01']),
+      paperclip: svg('M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48'),
+      globe: h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' },
+        h('circle', { cx: 12, cy: 12, r: 10 }),
+        h('line', { x1: 2, y1: 12, x2: 22, y2: 12 }),
+        h('path', { d: 'M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z' })),
+      camera: svg(['M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z', 'M16 13a4 4 0 11-8 0 4 4 0 018 0z']),
+      file: svg(['M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z', 'M14 2v6h6', 'M16 13H8', 'M16 17H8', 'M10 9H8']),
+      sparkle: h('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'currentColor' },
+        h('path', { d: 'M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z' })),
+      at: h('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 },
+        h('circle', { cx: 12, cy: 12, r: 4 }),
+        h('path', { d: 'M16 8v5a3 3 0 006 0v-1a10 10 0 10-3.92 7.94' })),
+      heart: h('svg', { width: 12, height: 12, viewBox: '0 0 24 24', fill: 'currentColor' },
+        h('path', { d: 'M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z' })),
+      dashboard: h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' },
+        h('rect', { x: 3, y: 3, width: 7, height: 9, rx: 1 }),
+        h('rect', { x: 14, y: 3, width: 7, height: 5, rx: 1 }),
+        h('rect', { x: 14, y: 12, width: 7, height: 9, rx: 1 }),
+        h('rect', { x: 3, y: 16, width: 7, height: 5, rx: 1 }),
+      ),
+    };
+
+    function useVoice(setText, getCurrent) {
+      const [listening, setListening] = useState(false);
+      const recogRef = useRef(null);
+      const toggle = useCallback(() => {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) { alert('Trình duyệt không hỗ trợ nhận diện giọng nói.'); return; }
+        if (listening) { recogRef.current?.stop(); return; }
+        const recog = new SR();
+        recog.lang = 'vi-VN'; recog.continuous = true; recog.interimResults = true;
+        const start = getCurrent();
+        let finalText = start + (start && !start.endsWith(' ') ? ' ' : '');
+        recog.onresult = (e) => {
+          let interim = '';
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            const t = e.results[i][0].transcript;
+            if (e.results[i].isFinal) finalText += t + ' ';
+            else interim += t;
+          }
+          setText(finalText + interim);
+        };
+        recog.onend = () => setListening(false);
+        recog.onerror = () => setListening(false);
+        recog.start();
+        recogRef.current = recog;
+        setListening(true);
+      }, [listening, setText, getCurrent]);
+      return [listening, toggle];
+    }
+
+    const DEFAULT_TEMPLATES = [
+      { id: 'tmpl_email_decline', name: 'email_từ_chối',
+        content: 'Viết email tiếng Việt lịch sự, ngắn gọn để từ chối lời mời/đề nghị sau. Giữ tone chuyên nghiệp và đề xuất giải pháp thay thế nếu hợp lý:\n\n' },
+      { id: 'tmpl_yt_desc', name: 'viết_caption',
+        content: 'Viết caption ngắn gọn, hấp dẫn cho bài đăng sau (có CTA, kèm 3-5 hashtag phù hợp ở cuối):\n\nNội dung: ' },
+      { id: 'tmpl_summary', name: 'tóm_tắt_bài',
+        content: 'Tóm tắt bài viết sau thành: (1) 1 câu key insight, (2) 3-5 điểm chính, (3) 1 takeaway hành động được. Văn bản:\n\n' },
+      { id: 'tmpl_review', name: 'review_code',
+        content: 'Review code sau với góc nhìn senior dev. Tìm: bug tiềm ẩn, edge case missing, performance issue, code style. Cho 3 cải tiến cụ thể nhất:\n\n```\n\n```' },
+    ];
+
+    function App() {
+      const init = getInitialState();
+      const [isOpen, setIsOpen] = useState(false);
+      const [provider, setProvider] = useState(init.provider);
+      const [model, setModel] = useState(init.model);
+      const [apiKeys, setApiKeys] = useState(init.apiKeys);
+      const [activePersonaId, setActivePersonaId] = useState(init.activePersonaId || 'default');
+      const [memoryFacts, setMemoryFacts] = useState(init.memoryFacts || []);
+      const [conversations, setConversations] = useState(init.conversations || []);
+      const [activeConvId, setActiveConvId] = useState(init.activeConvId || null);
+      const [templates, setTemplates] = useState(init.templates || DEFAULT_TEMPLATES);
+      const [useWebSearch, setUseWebSearch] = useState(init.useWebSearch || false);
+      const [view, setView] = useState('chat');
+      const [tasks, setTasks] = useState(init.tasks || []);
+      const [notes, setNotes] = useState(init.notes || '');
+      const [weatherCity, setWeatherCity] = useState(
+        init.weatherCity && init.weatherCity !== 'Hà Nội' ? init.weatherCity : 'Đà Nẵng'
+      );
+      const [theme, setTheme] = useState(init.theme || 'amber');
+      const [showSettings, setShowSettings] = useState(false);
+      const [showHistory, setShowHistory] = useState(false);
+      const [showPersonas, setShowPersonas] = useState(false);
+      const [isStreaming, setIsStreaming] = useState(false);
+      const [error, setError] = useState(null);
+      const [pendingAttachment, setPendingAttachment] = useState(null);  // From Electron screenshot
+      const abortRef = useRef(null);
+
+      // Apply theme to body
+      useEffect(() => {
+        if (theme === 'amber') document.body.removeAttribute('data-theme');
+        else document.body.setAttribute('data-theme', theme);
+      }, [theme]);
+
+      // Debounced save — avoids blocking main thread on every keystroke
+      useEffect(() => {
+        const t = setTimeout(() => {
+          // Slim attachments: drop redundant base64 (dataUrl contains same data)
+          const slimConvs = conversations.map(c => ({
+            ...c,
+            messages: (c.messages || []).map(m => {
+              if (!m.attachments?.length) return m;
+              return {
+                ...m,
+                attachments: m.attachments.map(a => ({ id: a.id, dataUrl: a.dataUrl, mimeType: a.mimeType, name: a.name })),
+              };
+            }),
+          }));
+          saveState({ provider, model, apiKeys, activePersonaId, memoryFacts, conversations: slimConvs, activeConvId, templates, useWebSearch, tasks, notes, weatherCity, theme });
+        }, 400);
+        return () => clearTimeout(t);
+      }, [provider, model, apiKeys, activePersonaId, memoryFacts, conversations, activeConvId, templates, useWebSearch, tasks, notes, weatherCity, theme]);
+
+      // Listen for Electron screenshot → attachment
+      useEffect(() => {
+        if (!isElectron || !electron.onAddAttachment) return;
+        electron.onAddAttachment((data) => {
+          // Open panel if closed
+          setIsOpen(true);
+          setPendingAttachment({
+            id: uid(),
+            dataUrl: data.dataUrl,
+            base64: data.dataUrl.split(',')[1],
+            mimeType: data.mimeType || 'image/png',
+            name: data.name || 'screenshot.png',
+          });
+        });
+      }, []);
+
+      // ── Electron: resize window when isOpen changes ──
+      useEffect(() => {
+        if (!isElectron) return;
+        const size = isOpen ? { width: 420, height: 640 } : { width: 96, height: 96 };
+        electron.resizeWindow(size);
+      }, [isOpen]);
+
+      useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape' && isOpen) setIsOpen(false); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, [isOpen]);
+
+      useEffect(() => {
+        if (!error) return;
+        const t = setTimeout(() => setError(null), 5000);
+        return () => clearTimeout(t);
+      }, [error]);
+
+      const conv = conversations.find(c => c.id === activeConvId);
+      const persona = PERSONAS.find(p => p.id === (conv?.personaId || activePersonaId)) || PERSONAS[0];
+
+      // Token estimation (rough)
+      const tokenCount = (() => {
+        if (!conv?.messages) return 0;
+        let total = 0;
+        for (const m of conv.messages) {
+          total += Math.round((m.content || '').length / 3);
+          if (m.attachments) total += m.attachments.length * 258;
+        }
+        return total;
+      })();
+      const modelLimits = { 'gemini-2.5-flash': 1048576, 'gemini-2.5-pro': 1048576, 'gemini-2.0-flash': 1048576 };
+      const ctxLimit = modelLimits[model] || 128000;
+      const ctxPct = ctxLimit ? Math.min(100, (tokenCount / ctxLimit) * 100) : 0;
+
+      const newConversation = useCallback(() => {
+        const id = uid();
+        const c = { id, title: 'Cuộc trò chuyện mới', personaId: activePersonaId, messages: [], updatedAt: Date.now() };
+        setConversations(prev => [c, ...prev]);
+        setActiveConvId(id);
+        return id;
+      }, [activePersonaId]);
+
+      const deleteConv = (id) => {
+        setConversations(prev => prev.filter(c => c.id !== id));
+        setActiveConvId(curr => curr === id ? null : curr);
+      };
+
+      const send = useCallback(async (text, attachments = []) => {
+        const trimmed = text.trim();
+        if ((!trimmed && attachments.length === 0) || isStreaming) return;
+        setError(null);
+
+        const cmd = parseCommand(trimmed);
+        const sendText = cmd?.transformed || trimmed;
+        if (cmd && !cmd.text) { setError(`Lệnh "${cmd.command.cmd}" cần nội dung`); return; }
+
+        // Compute intended convId from CLOSURE. If stale, the setConversations
+        // updater below will detect it (existing===undefined) and create a new conv.
+        const intendedConvId = conversations.find(c => c.id === activeConvId)?.id || uid();
+
+        const userMsg = { id: uid(), role: 'user', content: trimmed, ...(attachments.length ? { attachments } : {}) };
+
+        // ── Special: /ảnh image generation ──
+        if (cmd?.command.special === 'image-gen') {
+          const asstMsg = { id: uid(), role: 'assistant', content: '' };
+          setConversations(prev => {
+            const existing = prev.find(c => c.id === intendedConvId);
+            if (existing) {
+              return prev.map(c => {
+                if (c.id !== intendedConvId) return c;
+                const isFirstUser = c.messages.filter(m => m.role === 'user').length === 0;
+                const title = isFirstUser ? (trimmed.slice(0, 50) + (trimmed.length > 50 ? '…' : '')) : c.title;
+                return { ...c, messages: [...c.messages, userMsg, asstMsg], title, updatedAt: Date.now() };
+              });
+            }
+            const title = trimmed.slice(0, 50) + (trimmed.length > 50 ? '…' : '');
+            return [{ id: intendedConvId, title, personaId: activePersonaId, messages: [userMsg, asstMsg], updatedAt: Date.now() }, ...prev];
+          });
+          setActiveConvId(intendedConvId);
+          setIsStreaming(true);
+          try {
+            const img = await generateImage(cmd.text);
+            setConversations(prev => prev.map(c =>
+              c.id !== intendedConvId ? c : { ...c, messages: c.messages.map(m =>
+                m.id === asstMsg.id ? { ...m, content: `✨ "${cmd.text}"`, attachments: [img] } : m
+              )}
+            ));
+          } catch (err) {
+            setError(err.message);
+            setConversations(prev => prev.map(c =>
+              c.id !== intendedConvId ? c : { ...c, messages: c.messages.map(m =>
+                m.id === asstMsg.id ? { ...m, content: `⚠️ ${err.message}`, error: true } : m
+              )}
+            ));
+          } finally {
+            setIsStreaming(false);
+          }
+          return;
+        }
+
+        const asstMsg = { id: uid(), role: 'assistant', content: '' };
+
+        // Resolve and update inside updater (always uses LATEST state, immune to stale closure)
+        let snapshot;
+        setConversations(prev => {
+          const existing = prev.find(c => c.id === intendedConvId);
+          if (existing) {
+            const next = prev.map(c => {
+              if (c.id !== intendedConvId) return c;
+              const newMessages = [...c.messages, userMsg, asstMsg];
+              const isFirstUser = c.messages.filter(m => m.role === 'user').length === 0;
+              const title = isFirstUser ? (trimmed.slice(0, 50) + (trimmed.length > 50 ? '…' : '')) : c.title;
+              return { ...c, messages: newMessages, title, updatedAt: Date.now() };
+            });
+            snapshot = next.find(c => c.id === intendedConvId);
+            return next;
+          }
+          // Conv was deleted between memoization and execution — create fresh
+          const title = trimmed.slice(0, 50) + (trimmed.length > 50 ? '…' : '');
+          const newConv = { id: intendedConvId, title, personaId: activePersonaId, messages: [userMsg, asstMsg], updatedAt: Date.now() };
+          snapshot = newConv;
+          return [newConv, ...prev];
+        });
+        setActiveConvId(intendedConvId);
+
+        let systemPrompt = persona.sys;
+        if (memoryFacts.length > 0) {
+          systemPrompt += `\n\n---\nThông tin về người dùng (ghi nhớ):\n${memoryFacts.map((f, i) => `${i + 1}. ${f}`).join('\n')}`;
+        }
+
+        let apiMessages = (snapshot?.messages || [])
+          .filter(m => m.id !== asstMsg.id)
+          .map((m, i, arr) => i === arr.length - 1 && m.role === 'user'
+            ? { role: m.role, content: sendText, attachments: m.attachments }
+            : { role: m.role, content: m.content, attachments: m.attachments });
+
+        // Safety net: never send empty contents to API
+        if (apiMessages.length === 0) {
+          apiMessages = [{ role: 'user', content: sendText, attachments: attachments.length ? attachments : undefined }];
+        }
+
+        const apiKey = apiKeys[provider];
+        const controller = new AbortController();
+        abortRef.current = controller;
+        setIsStreaming(true);
+
+        try {
+          for await (const chunk of streamChat({ provider, model, apiKey, systemPrompt, messages: apiMessages, signal: controller.signal, useWebSearch })) {
+            if (typeof chunk === 'object' && chunk._grounding) {
+              const grounding = chunk._grounding;
+              setConversations(prev => prev.map(c =>
+                c.id !== intendedConvId ? c : { ...c, messages: c.messages.map(m => m.id === asstMsg.id ? { ...m, grounding } : m) }
+              ));
+              continue;
+            }
+            setConversations(prev => prev.map(c =>
+              c.id !== intendedConvId ? c : { ...c, messages: c.messages.map(m => m.id === asstMsg.id ? { ...m, content: (m.content || '') + chunk } : m) }
+            ));
+          }
+        } catch (err) {
+          if (err.name === 'AbortError') {
+            setConversations(prev => prev.map(c =>
+              c.id !== intendedConvId ? c : { ...c, messages: c.messages.map(m => m.id === asstMsg.id ? { ...m, content: (m.content || '') + '\n\n_[đã dừng]_' } : m) }
+            ));
+          } else {
+            setError(err.message);
+            setConversations(prev => prev.map(c =>
+              c.id !== intendedConvId ? c : { ...c, messages: c.messages.map(m => m.id === asstMsg.id ? { ...m, content: `⚠️ ${err.message}`, error: true } : m) }
+            ));
+          }
+        } finally {
+          setIsStreaming(false);
+          abortRef.current = null;
+        }
+      }, [isStreaming, activeConvId, conversations, persona, memoryFacts, apiKeys, provider, model, newConversation, useWebSearch]);
+
+      const regenerate = useCallback((asstMsgId) => {
+        if (isStreaming) return;
+        const conv = conversations.find(c => c.id === activeConvId);
+        if (!conv) return;
+        const asstIdx = conv.messages.findIndex(m => m.id === asstMsgId);
+        if (asstIdx === -1) return;
+        let userIdx = asstIdx - 1;
+        while (userIdx >= 0 && conv.messages[userIdx].role !== 'user') userIdx--;
+        if (userIdx < 0) return;
+        const userMsg = conv.messages[userIdx];
+        setConversations(prev => prev.map(c =>
+          c.id === conv.id ? { ...c, messages: c.messages.slice(0, userIdx) } : c
+        ));
+        setTimeout(() => send(userMsg.content, userMsg.attachments || []), 30);
+      }, [conversations, activeConvId, isStreaming, send]);
+
+      const editMessage = useCallback((userMsgId, newContent) => {
+        if (isStreaming) return;
+        const conv = conversations.find(c => c.id === activeConvId);
+        if (!conv) return;
+        const userIdx = conv.messages.findIndex(m => m.id === userMsgId);
+        if (userIdx === -1) return;
+        const userMsg = conv.messages[userIdx];
+        setConversations(prev => prev.map(c =>
+          c.id === conv.id ? { ...c, messages: c.messages.slice(0, userIdx) } : c
+        ));
+        setTimeout(() => send(newContent, userMsg.attachments || []), 30);
+      }, [conversations, activeConvId, isStreaming, send]);
+
+      const stop = () => abortRef.current?.abort();
+      const minimize = () => {
+        setIsOpen(false);
+      };
+
+      if (!isOpen) {
+        return h('div', { className: 'w-full h-full flex items-center justify-center' },
+          h(Bubble, { onClick: () => setIsOpen(true), isStreaming })
+        );
+      }
+
+      return h('div', { className: 'w-full h-full panel-pop' },
+        h('div', { className: 'glass-panel rounded-2xl flex flex-col h-full overflow-hidden relative', style: { boxShadow: '0 30px 80px -20px rgba(0,0,0,0.7)' } },
+          h(Header, {
+            persona, showPersonas, setShowPersonas,
+            useWebSearch, onToggleWebSearch: () => setUseWebSearch(v => !v),
+            onScreenshot: () => isElectron && electron.startScreenshot && electron.startScreenshot(),
+            view, onToggleView: () => setView(v => v === 'dashboard' ? 'chat' : 'dashboard'),
+            onShowHistory: () => setShowHistory(true),
+            onNewChat: () => { newConversation(); setView('chat'); },
+            onShowSettings: () => setShowSettings(true),
+            onClose: minimize,
+            onSelectPersona: (id) => {
+              setActivePersonaId(id);
+              setShowPersonas(false);
+              if (conv?.messages?.length > 0) newConversation();
+            },
+          }),
+          error && h('div', { className: 'px-3 pt-2' },
+            h('div', { className: 'bg-red-900/40 border border-red-700/40 rounded-lg px-3 py-2 text-xs text-red-200 flex items-start gap-2' },
+              h('span', { className: 'mt-0.5 shrink-0' }, I.warning),
+              h('span', null, error),
+            ),
+          ),
+          view === 'dashboard'
+            ? h(Dashboard, {
+                tasks, setTasks, notes, setNotes,
+                weatherCity, setWeatherCity,
+                onSummarize: ({ tasks, notes, weather, clipboard }) => {
+                  const taskTxt = tasks.length === 0 ? 'không có' : tasks.map(t => `${t.done ? '[x]' : '[ ]'} ${t.text}`).join('; ');
+                  const weatherTxt = weather ? `${weather.city} ${Math.round(weather.temp)}°C, ${WEATHER_INFO[weather.code]?.t || '—'}` : 'không có';
+                  const prompt = `Tóm tắt nhanh ngày của tôi và cho 1-2 lời khuyên ngắn:\n\n- Việc hôm nay: ${taskTxt}\n- Ghi chú: ${notes || 'không có'}\n- Thời tiết: ${weatherTxt}`;
+                  setView('chat');
+                  setTimeout(() => send(prompt), 50);
+                },
+                onUseClipboard: (text) => { setView('chat'); setTimeout(() => send(text), 50); },
+              })
+            : h(React.Fragment, null,
+                tokenCount > 500 && h('div', { className: 'px-4 py-1 flex items-center gap-2 text-[10px] text-ink-500 border-b border-white/5' },
+                  h('div', { className: 'flex-1 h-1 bg-ink-800 rounded-full overflow-hidden' },
+                    h('div', {
+                      className: ctxPct > 85 ? 'h-full bg-red-400' : ctxPct > 60 ? 'h-full bg-amber-glow' : 'h-full bg-amber-glow/50',
+                      style: { width: ctxPct + '%' },
+                    }),
+                  ),
+                  h('span', { className: 'font-mono shrink-0', title: `${tokenCount} tokens / ${ctxLimit.toLocaleString()} max` },
+                    tokenCount > 1000 ? `~${(tokenCount / 1000).toFixed(1)}K` : `~${tokenCount}`,
+                    ' tokens · ', ctxPct.toFixed(1), '%'
+                  ),
+                ),
+                h(MessageList, {
+                  messages: conv?.messages || [], persona, isStreaming,
+                  onRegenerate: regenerate, onEdit: editMessage,
+                }),
+                h(ChatInput, {
+                  onSend: send, onStop: stop, isStreaming, templates,
+                  pendingAttachment, clearPendingAttachment: () => setPendingAttachment(null),
+                }),
+              ),
+          showHistory && h(ConversationSidebar, {
+            conversations, activeConvId,
+            onSelect: (id) => { setActiveConvId(id); setShowHistory(false); setView('chat'); },
+            onNew: () => { newConversation(); setShowHistory(false); setView('chat'); },
+            onDelete: deleteConv,
+            onClose: () => setShowHistory(false),
+          }),
+          showSettings && h(Settings, {
+            provider, model, apiKeys, memoryFacts, templates, theme,
+            onProvider: (p) => { setProvider(p); setModel(PROVIDERS[p].models[0].id); },
+            onModel: setModel,
+            onApiKey: (id, key) => setApiKeys(prev => ({ ...prev, [id]: key })),
+            onAddFact: (fact) => setMemoryFacts(prev => [...prev, fact]),
+            onRemoveFact: (idx) => setMemoryFacts(prev => prev.filter((_, i) => i !== idx)),
+            onAddTemplate: (t) => setTemplates(prev => [...prev, { ...t, id: uid() }]),
+            onUpdateTemplate: (id, patch) => setTemplates(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t)),
+            onRemoveTemplate: (id) => setTemplates(prev => prev.filter(t => t.id !== id)),
+            onTheme: setTheme,
+            onClose: () => setShowSettings(false),
+          })
+        )
+      );
+    }
+
+    function Bubble({ onClick, isStreaming }) {
+      const dragRef = useRef(null);
+
+      const onMouseDown = (e) => {
+        if (e.button !== 0) return;
+        dragRef.current = {
+          startX: e.screenX, startY: e.screenY,
+          lastX: e.screenX, lastY: e.screenY,
+          didDrag: false,
+        };
+        const onMove = (ev) => {
+          const s = dragRef.current;
+          if (!s) return;
+          const totalDx = Math.abs(ev.screenX - s.startX);
+          const totalDy = Math.abs(ev.screenY - s.startY);
+          if (totalDx > 5 || totalDy > 5) s.didDrag = true;
+          if (s.didDrag) {
+            const dx = ev.screenX - s.lastX;
+            const dy = ev.screenY - s.lastY;
+            if ((dx || dy) && isElectron && electron.moveWindowBy) {
+              electron.moveWindowBy(dx, dy);
+            }
+            s.lastX = ev.screenX;
+            s.lastY = ev.screenY;
+          }
+        };
+        const onUp = () => {
+          window.removeEventListener('mousemove', onMove);
+          window.removeEventListener('mouseup', onUp);
+        };
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+      };
+
+      const handleClick = () => {
+        const s = dragRef.current;
+        dragRef.current = null;
+        if (s?.didDrag) return;  // it was a drag, skip click
+        onClick?.();
+      };
+
+      return h('button', {
+        onMouseDown,
+        onClick: handleClick,
+        className: 'bubble-pop relative w-16 h-16 rounded-full glass-bubble flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition',
+        title: 'Click để mở · Kéo để di chuyển',
+      },
+        h('div', { className: `text-ink-950 ${isStreaming ? 'ring-spin' : ''}`, style: { pointerEvents: 'none' } }, I.sparkles),
+        h('div', {
+          className: 'absolute -inset-3 rounded-full opacity-40 blur-2xl pointer-events-none',
+          style: { background: 'radial-gradient(circle, rgb(var(--accent-rgb)) 0%, transparent 70%)' },
+        }),
+      );
+    }
+
+    // ─────────────────────── Dashboard ───────────────────────
+    const WEATHER_INFO = {
+      0: { e: '☀️', t: 'Trời quang' },
+      1: { e: '🌤️', t: 'Hơi nắng' },
+      2: { e: '⛅', t: 'Có mây' },
+      3: { e: '☁️', t: 'Nhiều mây' },
+      45: { e: '🌫️', t: 'Sương mù' }, 48: { e: '🌫️', t: 'Sương mù dày' },
+      51: { e: '🌦️', t: 'Mưa phùn nhẹ' }, 53: { e: '🌦️', t: 'Mưa phùn' }, 55: { e: '🌧️', t: 'Mưa phùn nặng' },
+      61: { e: '🌧️', t: 'Mưa nhẹ' }, 63: { e: '🌧️', t: 'Mưa' }, 65: { e: '🌧️', t: 'Mưa to' },
+      71: { e: '🌨️', t: 'Tuyết nhẹ' }, 73: { e: '🌨️', t: 'Tuyết' }, 75: { e: '❄️', t: 'Tuyết dày' },
+      80: { e: '🌦️', t: 'Mưa rào nhẹ' }, 81: { e: '🌧️', t: 'Mưa rào' }, 82: { e: '⛈️', t: 'Mưa rào to' },
+      95: { e: '⛈️', t: 'Dông' }, 96: { e: '⛈️', t: 'Dông + mưa đá' }, 99: { e: '⛈️', t: 'Dông to' },
+    };
+
+    async function fetchWeather(city) {
+      const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=vi&format=json`);
+      const geoData = await geo.json();
+      if (!geoData.results?.length) throw new Error(`Không tìm thấy "${city}"`);
+      const { latitude, longitude, name, country } = geoData.results[0];
+      const w = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&timezone=auto`);
+      const wd = await w.json();
+      return {
+        city: name, country,
+        temp: wd.current.temperature_2m,
+        code: wd.current.weather_code,
+        wind: wd.current.wind_speed_10m,
+        humidity: wd.current.relative_humidity_2m,
+        time: wd.current.time,
+      };
+    }
+
+    function greetByHour() {
+      const h = new Date().getHours();
+      if (h < 11) return { txt: 'Chào buổi sáng', emoji: '☀️' };
+      if (h < 13) return { txt: 'Chào buổi trưa', emoji: '🌤️' };
+      if (h < 18) return { txt: 'Chào buổi chiều', emoji: '☕' };
+      if (h < 22) return { txt: 'Chào buổi tối', emoji: '🌆' };
+      return { txt: 'Khuya rồi nhỉ', emoji: '🌙' };
+    }
+
+    function Dashboard({ tasks, setTasks, notes, setNotes, weatherCity, setWeatherCity, onSummarize, onUseClipboard }) {
+      const [weather, setWeather] = useState(null);
+      const [weatherErr, setWeatherErr] = useState(null);
+      const [weatherLoading, setWeatherLoading] = useState(false);
+      const [editingCity, setEditingCity] = useState(false);
+      const [tmpCity, setTmpCity] = useState(weatherCity);
+      const [newTask, setNewTask] = useState('');
+      const [clipboard, setClipboard] = useState('');
+
+      // Fetch weather
+      const loadWeather = async (c) => {
+        setWeatherLoading(true); setWeatherErr(null);
+        try { setWeather(await fetchWeather(c)); }
+        catch (e) { setWeatherErr(e.message); }
+        finally { setWeatherLoading(false); }
+      };
+      useEffect(() => { loadWeather(weatherCity); }, []);
+
+      // Read clipboard on mount
+      useEffect(() => {
+        if (!isElectron || !electron.readClipboard) return;
+        electron.readClipboard().then(t => setClipboard(t || ''));
+      }, []);
+
+      const addTask = () => {
+        if (!newTask.trim()) return;
+        setTasks(prev => [...prev, { id: uid(), text: newTask.trim(), done: false, t: Date.now() }]);
+        setNewTask('');
+      };
+      const toggleTask = (id) => setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+      const delTask = (id) => setTasks(prev => prev.filter(t => t.id !== id));
+      const clearDone = () => setTasks(prev => prev.filter(t => !t.done));
+
+      const greet = greetByHour();
+      const today = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' });
+      const doneCount = tasks.filter(t => t.done).length;
+
+      return h('div', { className: 'flex-1 min-h-0 overflow-y-auto p-3 space-y-3' },
+        // Greeting + date
+        h('div', { className: 'text-center' },
+          h('div', { style: { fontFamily: 'Instrument Serif, serif', fontSize: '24px' }, className: 'text-ink-100' },
+            greet.emoji, ' ', greet.txt
+          ),
+          h('div', { className: 'text-[11px] text-ink-400 capitalize' }, today),
+        ),
+
+        // Weather
+        h('div', { className: 'bg-ink-800/40 border border-white/5 rounded-2xl p-3' },
+          h('div', { className: 'flex items-center justify-between mb-1.5' },
+            h('div', { className: 'text-[10px] text-amber-glow/80 uppercase tracking-wider' }, '🌤️ Thời tiết'),
+            editingCity
+              ? h('div', { className: 'flex gap-1' },
+                  h('input', {
+                    type: 'text', value: tmpCity, onChange: e => setTmpCity(e.target.value),
+                    onKeyDown: e => { if (e.key === 'Enter') { setWeatherCity(tmpCity); setEditingCity(false); loadWeather(tmpCity); } },
+                    autoFocus: true,
+                    className: 'bg-ink-800 border border-amber-glow/40 rounded px-2 py-0.5 text-[11px] text-ink-100 w-24 focus:outline-none',
+                  }),
+                  h('button', {
+                    onClick: () => { setWeatherCity(tmpCity); setEditingCity(false); loadWeather(tmpCity); },
+                    className: 'text-[11px] text-amber-glow hover:underline',
+                  }, 'OK')
+                )
+              : h('button', {
+                  onClick: () => { setTmpCity(weatherCity); setEditingCity(true); },
+                  className: 'text-[11px] text-ink-400 hover:text-amber-glow',
+                }, weatherCity, ' ✎')
+          ),
+          weatherLoading
+            ? h('div', { className: 'text-xs text-ink-400 py-2' }, 'Đang tải...')
+            : weatherErr
+              ? h('div', { className: 'text-xs text-red-300 py-1' }, weatherErr)
+              : weather && h('div', { className: 'flex items-center gap-3' },
+                  h('div', { className: 'text-5xl' }, WEATHER_INFO[weather.code]?.e || '🌡️'),
+                  h('div', { className: 'flex-1' },
+                    h('div', { className: 'text-2xl text-ink-100 font-light' }, Math.round(weather.temp), '°C'),
+                    h('div', { className: 'text-[11px] text-ink-400' }, WEATHER_INFO[weather.code]?.t || '—'),
+                    h('div', { className: 'text-[10px] text-ink-500 mt-0.5' },
+                      `💨 ${Math.round(weather.wind)} km/h · 💧 ${weather.humidity}%`
+                    ),
+                  )
+                )
+        ),
+
+        // Tasks
+        h('div', { className: 'bg-ink-800/40 border border-white/5 rounded-2xl p-3' },
+          h('div', { className: 'flex items-center justify-between mb-2' },
+            h('div', { className: 'text-[10px] text-amber-glow/80 uppercase tracking-wider' }, '✅ Việc hôm nay'),
+            tasks.length > 0 && h('span', { className: 'text-[10px] text-ink-400' },
+              `${doneCount}/${tasks.length}`),
+          ),
+          h('div', { className: 'flex gap-1.5 mb-2' },
+            h('input', {
+              type: 'text', value: newTask, onChange: e => setNewTask(e.target.value),
+              onKeyDown: e => { if (e.key === 'Enter') addTask(); },
+              placeholder: 'Thêm việc... (Enter)',
+              autoComplete: 'off',
+              className: 'flex-1 bg-ink-800/60 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-ink-100 placeholder-ink-500 focus:outline-none focus:border-amber-glow/40',
+            }),
+            h('button', { onClick: addTask, className: 'px-2 py-1 rounded-lg bg-amber-glow/15 text-amber-glow hover:bg-amber-glow/25 text-xs font-medium' }, '+'),
+          ),
+          tasks.length === 0
+            ? h('div', { className: 'text-center text-[11px] text-ink-500 py-2' }, 'Chưa có việc')
+            : h('div', { className: 'space-y-1' },
+                tasks.map(t => h('div', {
+                  key: t.id,
+                  className: 'group flex items-start gap-2 px-1.5 py-1 rounded hover:bg-white/5',
+                },
+                  h('button', {
+                    onClick: () => toggleTask(t.id),
+                    className: `mt-0.5 w-4 h-4 rounded border ${t.done ? 'bg-amber-glow border-amber-glow' : 'border-ink-400'} flex items-center justify-center shrink-0`,
+                  }, t.done && h('span', { className: 'text-ink-950 text-[10px]' }, '✓')),
+                  h('span', { className: `flex-1 text-xs ${t.done ? 'line-through text-ink-500' : 'text-ink-200'}` }, t.text),
+                  h('button', {
+                    onClick: () => delTask(t.id),
+                    className: 'opacity-0 group-hover:opacity-100 text-ink-500 hover:text-red-400 text-xs',
+                  }, '×')
+                ))
+              ),
+          doneCount > 0 && h('button', {
+            onClick: clearDone,
+            className: 'mt-2 text-[10px] text-ink-500 hover:text-amber-glow',
+          }, `Xóa ${doneCount} việc đã xong`)
+        ),
+
+        // Quick notes
+        h('div', { className: 'bg-ink-800/40 border border-white/5 rounded-2xl p-3' },
+          h('div', { className: 'text-[10px] text-amber-glow/80 uppercase tracking-wider mb-1.5' }, '📝 Ghi chú nhanh'),
+          h('textarea', {
+            value: notes, onChange: e => setNotes(e.target.value),
+            placeholder: 'Ghi gì đó nhanh ở đây... (tự lưu)',
+            rows: 4,
+            className: 'w-full bg-ink-800/60 border border-white/10 rounded-lg px-3 py-2 text-xs text-ink-100 placeholder-ink-500 focus:outline-none focus:border-amber-glow/40 resize-none',
+          })
+        ),
+
+        // Clipboard
+        clipboard && h('div', { className: 'bg-ink-800/40 border border-white/5 rounded-2xl p-3' },
+          h('div', { className: 'flex items-center justify-between mb-1.5' },
+            h('div', { className: 'text-[10px] text-amber-glow/80 uppercase tracking-wider' }, '📋 Clipboard hiện tại'),
+            h('button', {
+              onClick: () => isElectron && electron.readClipboard && electron.readClipboard().then(t => setClipboard(t || '')),
+              className: 'text-[10px] text-ink-400 hover:text-amber-glow',
+            }, '↻ làm mới'),
+          ),
+          h('div', { className: 'bg-ink-800/60 rounded-lg px-2.5 py-1.5 text-[11px] text-ink-300 max-h-20 overflow-y-auto break-words mb-2' },
+            clipboard.slice(0, 300) + (clipboard.length > 300 ? '...' : '')
+          ),
+          h('div', { className: 'flex gap-1.5' },
+            h('button', {
+              onClick: () => onUseClipboard(`/tóm ${clipboard}`),
+              className: 'flex-1 text-[11px] px-2 py-1 rounded-lg bg-amber-glow/10 border border-amber-glow/30 text-amber-glow hover:bg-amber-glow/20',
+            }, '📄 Tóm tắt'),
+            h('button', {
+              onClick: () => onUseClipboard(`/dịch ${clipboard}`),
+              className: 'flex-1 text-[11px] px-2 py-1 rounded-lg bg-amber-glow/10 border border-amber-glow/30 text-amber-glow hover:bg-amber-glow/20',
+            }, '🌐 Dịch'),
+            h('button', {
+              onClick: () => onUseClipboard(clipboard),
+              className: 'flex-1 text-[11px] px-2 py-1 rounded-lg border border-white/10 text-ink-300 hover:border-amber-glow/40',
+            }, '➕ Chèn'),
+          )
+        ),
+
+        // AI summary
+        h('button', {
+          onClick: () => onSummarize({ tasks, notes, weather, clipboard }),
+          className: 'w-full px-3 py-2.5 rounded-2xl bg-gradient-to-r from-amber-glow/20 to-amber-glow/10 border border-amber-glow/30 text-amber-glow text-sm font-medium hover:from-amber-glow/30 hover:to-amber-glow/20 transition',
+        }, '✨ AI tóm tắt ngày của tôi'),
+      );
+    }
+
+    function Header({ persona, showPersonas, setShowPersonas, useWebSearch, onToggleWebSearch, onScreenshot, onShowHistory, onNewChat, onShowSettings, onClose, onSelectPersona, view, onToggleView }) {
+      return h('div', {
+        className: 'flex items-center justify-between px-3 py-2.5 border-b border-white/5 shrink-0',
+        style: { WebkitAppRegion: 'drag' },
+      },
+        h('div', { className: 'flex items-center gap-1 min-w-0', style: { WebkitAppRegion: 'no-drag' } },
+          h('button', { onClick: onShowHistory, className: 'text-ink-400 hover:text-ink-100 p-1 rounded transition', title: 'Lịch sử' }, I.history),
+          h('div', { className: 'relative' },
+            h('button', {
+              onClick: () => setShowPersonas(!showPersonas),
+              className: 'flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-white/5 transition',
+            },
+              h('span', { className: 'text-base' }, persona.emoji),
+              h('span', { className: 'text-sm font-medium' }, persona.name),
+              h('span', { className: 'text-ink-400' }, I.chevDown),
+            ),
+            showPersonas && h(React.Fragment, null,
+              h('div', { className: 'fixed inset-0 z-10', onClick: () => setShowPersonas(false) }),
+              h('div', { className: 'absolute top-full left-0 mt-1 w-60 glass-panel rounded-xl z-20 overflow-hidden shadow-2xl fade-in' },
+                PERSONAS.map(p => h('button', {
+                  key: p.id, onClick: () => onSelectPersona(p.id),
+                  className: `w-full px-3 py-2 hover:bg-white/5 flex items-start gap-2 text-left border-b border-white/5 last:border-b-0 ${p.id === persona.id ? 'bg-amber-glow/10' : ''}`,
+                },
+                  h('span', { className: 'text-lg shrink-0' }, p.emoji),
+                  h('div', { className: 'min-w-0' },
+                    h('div', { className: 'text-sm font-medium' }, p.name),
+                    h('div', { className: 'text-[11px] text-ink-400 truncate' }, p.desc),
+                  )
+                ))
+              )
+            )
+          )
+        ),
+        h('div', { className: 'flex items-center gap-0.5', style: { WebkitAppRegion: 'no-drag' } },
+          h('button', {
+            onClick: onToggleView,
+            className: `p-1.5 rounded transition ${view === 'dashboard' ? 'text-amber-glow bg-amber-glow/10' : 'text-ink-400 hover:text-amber-glow'}`,
+            title: view === 'dashboard' ? 'Quay lại chat' : 'Daily Dashboard',
+          }, I.dashboard),
+          isElectron && h('button', {
+            onClick: onScreenshot,
+            className: 'text-ink-400 hover:text-amber-glow p-1.5 rounded transition',
+            title: 'Chụp vùng màn hình (Ctrl+Shift+S)',
+          }, I.camera),
+          h('button', {
+            onClick: onToggleWebSearch,
+            className: `p-1.5 rounded transition ${useWebSearch ? 'text-amber-glow bg-amber-glow/10' : 'text-ink-400 hover:text-amber-glow'}`,
+            title: useWebSearch ? 'Web search BẬT (chỉ với Gemini)' : 'Bật web search (chỉ với Gemini)',
+          }, I.globe),
+          h('button', { onClick: onNewChat, className: 'text-ink-400 hover:text-amber-glow p-1.5 rounded transition', title: 'Trò chuyện mới' }, I.plus),
+          h('button', { onClick: onShowSettings, className: 'text-ink-400 hover:text-ink-100 p-1.5 rounded transition', title: 'Cài đặt' }, I.settings),
+          h('button', { onClick: onClose, className: 'text-ink-400 hover:text-ink-100 p-1.5 rounded transition', title: 'Thu nhỏ' }, I.close),
+        )
+      );
+    }
+
+    function MessageList({ messages, persona, isStreaming, onRegenerate, onEdit }) {
+      const ref = useRef(null);
+      useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [messages, isStreaming]);
+
+      if (messages.length === 0) {
+        return h('div', { className: 'flex-1 min-h-0 overflow-y-auto px-6 flex flex-col items-center justify-center text-center' },
+          h('div', { className: 'flex items-center gap-2 mb-1 text-amber-glow/90' },
+            h('span', { style: { fontFamily: 'Instrument Serif, serif', fontSize: '20px', letterSpacing: '0.05em' } }, 'PMĐ Chat'),
+            h('span', { className: 'opacity-60' }, I.sparkle),
+          ),
+          h('div', { className: 'text-[10px] text-ink-500 mb-5 tracking-wider uppercase' }, 'by Phan Minh Đức'),
+          h('div', { className: 'text-5xl mb-2' }, persona.emoji),
+          h('h3', { className: 'text-xl mb-1 text-ink-100', style: { fontFamily: 'Instrument Serif, serif' } }, `Chào, tôi là ${persona.name}`),
+          h('p', { className: 'text-xs text-ink-400 mb-5 max-w-xs' }, persona.desc),
+          h('div', { className: 'space-y-1.5 w-full max-w-xs' },
+            ['/ảnh hoàng hôn trên núi style watercolor', '/tóm <paste link bài báo>', '/dịch I love floating chat apps', 'Chụp screenshot bug → Ctrl+Shift+S']
+              .map(s => h('div', { key: s, className: 'text-left text-[11px] text-ink-400 px-3 py-1.5 rounded-lg border border-white/5 truncate' }, s))
+          ),
+          h('p', { className: 'text-[10px] text-ink-500 mt-5 flex items-center gap-2' },
+            h('kbd', { className: 'px-1 py-0.5 bg-ink-800 rounded text-ink-300' }, 'Ctrl+Shift+Space'), 'bật/tắt'
+          ),
+        );
+      }
+
+      return h('div', { ref, className: 'flex-1 min-h-0 overflow-y-auto py-4 space-y-3' },
+        messages.map((m, i) => h(Message, {
+          key: m.id, message: m,
+          isLast: i === messages.length - 1,
+          isStreaming: isStreaming && i === messages.length - 1,
+          onRegenerate, onEdit,
+        }))
+      );
+    }
+
+    function Message({ message, isStreaming, isLast, onRegenerate, onEdit }) {
+      const [copied, setCopied] = useState(false);
+      const [editing, setEditing] = useState(false);
+      const [editText, setEditText] = useState(message.content);
+      const [speaking, setSpeaking] = useState(false);
+      const isUser = message.role === 'user';
+
+      const copy = async () => {
+        await navigator.clipboard.writeText(message.content);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      };
+
+      const speak = () => {
+        if (!window.speechSynthesis) return;
+        if (speaking || window.speechSynthesis.speaking) {
+          window.speechSynthesis.cancel();
+          setSpeaking(false);
+          return;
+        }
+        // Strip markdown for cleaner speech
+        const clean = (message.content || '').replace(/[*_`#>\[\]()]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!clean) return;
+        const utter = new SpeechSynthesisUtterance(clean);
+        utter.lang = 'vi-VN';
+        utter.rate = 1.0;
+        utter.pitch = 1.0;
+        utter.onend = () => setSpeaking(false);
+        utter.onerror = () => setSpeaking(false);
+        window.speechSynthesis.speak(utter);
+        setSpeaking(true);
+      };
+
+      const saveEdit = () => {
+        if (editText.trim() === message.content.trim()) { setEditing(false); return; }
+        onEdit?.(message.id, editText.trim());
+        setEditing(false);
+      };
+
+      const isImage = (a) => a.mimeType?.startsWith('image/');
+      const imgAttachments = message.attachments?.filter(isImage) || [];
+      const fileAttachments = message.attachments?.filter(a => !isImage(a)) || [];
+
+      return h('div', { className: `group flex ${isUser ? 'justify-end' : 'justify-start'} px-4 fade-in selectable` },
+        h('div', { className: 'max-w-[85%]' },
+          imgAttachments.length > 0 && h('div', { className: `flex flex-wrap gap-1.5 mb-1.5 ${isUser ? 'justify-end' : 'justify-start'}` },
+            imgAttachments.map(a => h('img', {
+              key: a.id,
+              src: a.dataUrl || `data:${a.mimeType};base64,${a.base64}`,
+              className: 'max-w-[200px] max-h-[200px] rounded-lg border border-white/10 object-cover cursor-pointer hover:brightness-110 transition',
+              onClick: () => window.open(a.dataUrl || `data:${a.mimeType};base64,${a.base64}`),
+              alt: a.name || 'image',
+            }))
+          ),
+          fileAttachments.length > 0 && h('div', { className: `flex flex-wrap gap-1.5 mb-1.5 ${isUser ? 'justify-end' : 'justify-start'}` },
+            fileAttachments.map(a => h('div', {
+              key: a.id,
+              className: 'flex items-center gap-2 px-2.5 py-1.5 bg-ink-800/60 border border-white/10 rounded-lg max-w-[200px]',
+              title: a.name,
+            },
+              h('span', { className: 'text-amber-glow shrink-0' }, I.file),
+              h('span', { className: 'text-xs text-ink-200 truncate' }, a.name || 'file'),
+            ))
+          ),
+          editing
+            ? h('div', { className: 'flex flex-col gap-1.5' },
+                h('textarea', {
+                  value: editText,
+                  onChange: e => setEditText(e.target.value),
+                  autoFocus: true,
+                  rows: Math.min(8, editText.split('\n').length + 1),
+                  className: 'rounded-2xl px-4 py-2.5 bg-ink-800/90 border border-amber-glow/40 text-ink-100 text-sm focus:outline-none resize-none w-[280px]',
+                }),
+                h('div', { className: 'flex justify-end gap-2 text-xs' },
+                  h('button', {
+                    onClick: () => { setEditing(false); setEditText(message.content); },
+                    className: 'px-2.5 py-1 rounded-lg border border-white/10 text-ink-300 hover:border-white/20',
+                  }, 'Hủy'),
+                  h('button', {
+                    onClick: saveEdit,
+                    className: 'px-2.5 py-1 rounded-lg bg-amber-glow text-ink-950 font-medium hover:brightness-110',
+                  }, 'Lưu & Gửi lại'),
+                )
+              )
+            : (message.content || (!imgAttachments.length && !fileAttachments.length)) && h('div', {
+                className: `rounded-2xl px-4 py-2.5 ${
+                  isUser
+                    ? 'bg-gradient-to-br from-amber-glow/90 to-amber-glow/70 text-ink-950 rounded-br-md'
+                    : message.error
+                      ? 'bg-red-900/30 border border-red-700/40 text-red-200 rounded-bl-md'
+                      : 'bg-ink-800/70 text-ink-100 rounded-bl-md border border-white/5'
+                }`,
+              },
+                isUser
+                  ? h('div', { style: { whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '14px', lineHeight: '1.5' } }, message.content)
+                  : (message.content
+                      ? h('div', { className: 'md', dangerouslySetInnerHTML: { __html: renderMd(message.content) } })
+                      : h('div', { className: 'typing-dots' }, h('span'), h('span'), h('span'))
+                    )
+              ),
+
+          // Grounding sources (web search)
+          message.grounding?.chunks?.length > 0 && h('div', { className: 'mt-2 pt-2 border-t border-white/5 space-y-1' },
+            h('div', { className: 'text-[10px] text-amber-glow/80 flex items-center gap-1 uppercase tracking-wider' },
+              I.globe, 'Nguồn web'
+            ),
+            message.grounding.chunks.slice(0, 5).map((c, i) => h('a', {
+              key: i,
+              href: c.web?.uri || '#',
+              target: '_blank',
+              rel: 'noreferrer',
+              className: 'block text-[11px] text-ink-300 hover:text-amber-glow truncate transition',
+              title: c.web?.title,
+            }, `${i + 1}. ${c.web?.title || c.web?.uri || 'source'}`))
+          ),
+
+          // Action bar (copy, speak, edit, regenerate)
+          message.content && !isStreaming && !editing && h('div', {
+            className: `opacity-0 group-hover:opacity-100 transition-opacity mt-1 flex items-center gap-2 text-xs text-ink-400 ${isUser ? 'justify-end' : ''}`,
+          },
+            h('button', { onClick: copy, className: 'hover:text-ink-200 flex items-center gap-1', title: 'Sao chép' },
+              copied ? I.check : I.copy, h('span', null, copied ? 'đã chép' : 'chép')),
+            !isUser && h('button', {
+              onClick: speak,
+              className: `hover:text-amber-glow flex items-center gap-1 ${speaking ? 'text-amber-glow' : ''}`,
+              title: speaking ? 'Dừng đọc' : 'Đọc to (tiếng Việt)',
+            }, '🔊', h('span', null, speaking ? 'dừng' : 'đọc')),
+            !isUser && isLast && onRegenerate && h('button', {
+              onClick: () => onRegenerate(message.id),
+              className: 'hover:text-amber-glow flex items-center gap-1',
+              title: 'Làm lại câu trả lời',
+            }, '↻', h('span', null, 'làm lại')),
+            isUser && onEdit && h('button', {
+              onClick: () => { setEditText(message.content); setEditing(true); },
+              className: 'hover:text-amber-glow flex items-center gap-1',
+              title: 'Sửa & gửi lại',
+            }, '✎', h('span', null, 'sửa')),
+          )
+        )
+      );
+    }
+
+    function ChatInput({ onSend, onStop, isStreaming, templates, pendingAttachment, clearPendingAttachment }) {
+      const [text, setText] = useState('');
+      const [attachments, setAttachments] = useState([]);
+      const taRef = useRef(null);
+      const fileRef = useRef(null);
+      const textRef = useRef(text);
+      useEffect(() => { textRef.current = text; }, [text]);
+      const [listening, toggleVoice] = useVoice(setText, () => textRef.current);
+
+      // Receive attachment from Electron screenshot
+      useEffect(() => {
+        if (pendingAttachment) {
+          setAttachments(prev => [...prev, pendingAttachment]);
+          clearPendingAttachment();
+        }
+      }, [pendingAttachment, clearPendingAttachment]);
+
+      useEffect(() => {
+        const ta = taRef.current;
+        if (!ta) return;
+        ta.style.height = 'auto';
+        ta.style.height = Math.min(ta.scrollHeight, 140) + 'px';
+      }, [text]);
+
+      const addFile = (file) => {
+        if (!file) return;
+        const isImage = file.type.startsWith('image/');
+        const isPdf = file.type === 'application/pdf';
+        const isText = file.type.startsWith('text/') || /\.(txt|md|csv|json|js|ts|py|html|css|xml|log)$/i.test(file.name);
+        if (!isImage && !isPdf && !isText) {
+          alert(`Loại file không hỗ trợ: ${file.type || file.name}`);
+          return;
+        }
+        if (file.size > 20 * 1024 * 1024) { alert('File quá lớn (>20MB)'); return; }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target.result;
+          const base64 = dataUrl.split(',')[1];
+          setAttachments(prev => [...prev, {
+            id: uid(),
+            mimeType: file.type || (isPdf ? 'application/pdf' : 'text/plain'),
+            base64, dataUrl,
+            name: file.name || 'file',
+            size: file.size,
+          }]);
+        };
+        reader.readAsDataURL(file);
+      };
+
+      const onPaste = (e) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (const item of items) {
+          if (item.type.startsWith('image/')) {
+            e.preventDefault();
+            const file = item.getAsFile();
+            if (file) addFile(file);
+          }
+        }
+      };
+
+      const onFilePick = (e) => {
+        const files = e.target.files;
+        if (!files) return;
+        for (const f of files) addFile(f);
+        e.target.value = '';
+      };
+
+      const removeAttachment = (id) => setAttachments(prev => prev.filter(a => a.id !== id));
+
+      const suggestions = matchCommands(text);
+      const showSuggestions = suggestions.length > 0 && text.startsWith('/');
+      const tmplMatch = matchTemplates(text, templates);
+      const showTemplates = tmplMatch.matches.length > 0;
+
+      const applyTemplate = (t) => {
+        const before = text.slice(0, tmplMatch.startIdx);
+        setText(before + t.content);
+        setTimeout(() => taRef.current?.focus(), 0);
+      };
+
+      const canSubmit = (text.trim() || attachments.length > 0) && !isStreaming;
+      const submit = () => {
+        if (!canSubmit) return;
+        onSend(text, attachments);
+        setText('');
+        setAttachments([]);
+      };
+      const onKeyDown = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
+        if (e.key === 'Tab' && showSuggestions) { e.preventDefault(); setText(suggestions[0].cmd + ' '); taRef.current?.focus(); }
+        if (e.key === 'Tab' && showTemplates) { e.preventDefault(); applyTemplate(tmplMatch.matches[0]); }
+      };
+
+      const isImg = (a) => a.mimeType?.startsWith('image/');
+
+      return h('div', { className: 'relative shrink-0' },
+        showSuggestions && h('div', { className: 'absolute bottom-full left-3 right-3 mb-2 glass-panel rounded-xl overflow-hidden shadow-2xl fade-in' },
+          suggestions.map(s => h('button', {
+            key: s.cmd, onClick: () => { setText(s.cmd + ' '); taRef.current?.focus(); },
+            className: 'w-full text-left px-3 py-2 hover:bg-white/5 flex items-center justify-between gap-3 border-b border-white/5 last:border-b-0',
+          },
+            h('div', { className: 'flex items-center gap-2 min-w-0' },
+              h('span', { className: 'font-mono text-amber-glow text-sm' }, s.cmd),
+              h('span', { className: 'text-ink-300 text-sm' }, s.label),
+            ),
+            h('span', { className: 'text-ink-400 text-xs truncate' }, s.desc),
+          )),
+          h('div', { className: 'px-3 py-1 text-[10px] text-ink-500 bg-black/20' }, 'Tab để chọn nhanh')
+        ),
+        showTemplates && h('div', { className: 'absolute bottom-full left-3 right-3 mb-2 glass-panel rounded-xl overflow-hidden shadow-2xl fade-in' },
+          h('div', { className: 'px-3 py-1.5 text-[10px] text-amber-glow/80 bg-amber-glow/5 uppercase tracking-wider flex items-center gap-1' },
+            I.at, 'Mẫu prompt'
+          ),
+          tmplMatch.matches.slice(0, 5).map(t => h('button', {
+            key: t.id, onClick: () => applyTemplate(t),
+            className: 'w-full text-left px-3 py-2 hover:bg-white/5 flex items-center gap-2 border-b border-white/5 last:border-b-0',
+          },
+            h('span', { className: 'font-mono text-amber-glow text-sm shrink-0' }, '@' + t.name),
+            h('span', { className: 'text-ink-400 text-xs truncate' }, t.content.slice(0, 60))
+          )),
+          h('div', { className: 'px-3 py-1 text-[10px] text-ink-500 bg-black/20' }, 'Tab để chọn · thêm trong Cài đặt → Mẫu')
+        ),
+
+        attachments.length > 0 && h('div', { className: 'flex flex-wrap gap-2 px-3 pt-2' },
+          attachments.map(a => h('div', { key: a.id, className: 'relative' },
+            isImg(a)
+              ? h('img', {
+                  src: a.dataUrl,
+                  className: 'w-14 h-14 rounded-lg object-cover border border-white/10',
+                  alt: a.name,
+                })
+              : h('div', {
+                  className: 'h-14 px-2.5 flex items-center gap-1.5 bg-ink-800/60 border border-white/10 rounded-lg max-w-[140px]',
+                  title: a.name,
+                },
+                  h('span', { className: 'text-amber-glow shrink-0' }, I.file),
+                  h('span', { className: 'text-[11px] text-ink-200 truncate' }, a.name),
+                ),
+            h('button', {
+              onClick: () => removeAttachment(a.id),
+              className: 'absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500/90 hover:bg-red-500 text-white text-xs font-bold flex items-center justify-center transition',
+              title: 'Bỏ',
+            }, '×')
+          ))
+        ),
+        h('input', {
+          ref: fileRef, type: 'file',
+          accept: 'image/*,.pdf,application/pdf,.txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,text/*',
+          multiple: true,
+          onChange: onFilePick, style: { display: 'none' },
+        }),
+        h('div', { className: 'flex items-end gap-1.5 px-3 pb-3 pt-2 border-t border-white/5' },
+          h('button', {
+            onClick: () => fileRef.current?.click(),
+            className: 'shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition text-ink-400 hover:text-amber-glow hover:bg-white/5',
+            title: 'Thêm ảnh/PDF/text (Ctrl+V dán ảnh)',
+          }, I.paperclip),
+          isElectron && h('button', {
+            onClick: () => electron.startScreenshot && electron.startScreenshot(),
+            className: 'shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition text-ink-400 hover:text-amber-glow hover:bg-white/5',
+            title: 'Chụp vùng màn hình (Ctrl+Shift+S)',
+          }, I.camera),
+          h('button', {
+            onClick: toggleVoice,
+            className: `shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition ${
+              listening ? 'bg-red-500/20 text-red-300 pulse-ring' : 'text-ink-400 hover:text-amber-glow hover:bg-white/5'
+            }`,
+            title: listening ? 'Dừng ghi âm' : 'Nói (tiếng Việt)',
+          }, I.mic),
+          h('textarea', {
+            ref: taRef, value: text, onChange: e => setText(e.target.value), onKeyDown, onPaste,
+            placeholder: 'Nhắn... (/ lệnh, @ mẫu, Ctrl+V dán ảnh)',
+            rows: 1,
+            className: 'flex-1 bg-ink-800/60 border border-white/10 rounded-2xl px-4 py-2.5 text-ink-100 placeholder-ink-500 text-sm focus:outline-none focus:border-amber-glow/40 focus:bg-ink-800/80 resize-none transition',
+            style: { maxHeight: '140px' },
+          }),
+          isStreaming
+            ? h('button', { onClick: onStop, className: 'shrink-0 w-9 h-9 rounded-full bg-red-500/80 hover:bg-red-500 text-white flex items-center justify-center transition', title: 'Dừng' }, I.stop)
+            : h('button', { onClick: submit, disabled: !canSubmit,
+                className: 'shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition bg-amber-glow text-ink-950 hover:brightness-110 disabled:bg-ink-700 disabled:text-ink-500 disabled:cursor-not-allowed',
+                title: 'Gửi (Enter)' }, I.send),
+        )
+      );
+    }
+
+    function exportConvToMarkdown(conv) {
+      const lines = [`# ${conv.title || 'Cuộc trò chuyện'}`, '', `_${new Date(conv.updatedAt).toLocaleString('vi-VN')}_`, ''];
+      for (const m of conv.messages) {
+        const role = m.role === 'user' ? '🧑 **Bạn**' : '🤖 **AI**';
+        lines.push(`## ${role}`, '');
+        if (m.attachments?.length) {
+          for (const a of m.attachments) {
+            lines.push(`> 📎 _${a.name || 'attachment'}_`);
+          }
+          lines.push('');
+        }
+        if (m.content) lines.push(m.content, '');
+        if (m.grounding?.chunks?.length) {
+          lines.push('**Nguồn web:**');
+          m.grounding.chunks.slice(0, 5).forEach((c, i) => {
+            lines.push(`${i + 1}. [${c.web?.title || c.web?.uri}](${c.web?.uri})`);
+          });
+          lines.push('');
+        }
+        lines.push('---', '');
+      }
+      const md = lines.join('\n');
+      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const safe = (conv.title || 'chat').replace(/[\\/:*?"<>|]/g, '_').slice(0, 60);
+      a.download = `${safe}.md`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function ConversationSidebar({ conversations, activeConvId, onSelect, onNew, onDelete, onClose }) {
+      const [query, setQuery] = useState('');
+      const [confirmingId, setConfirmingId] = useState(null);
+
+      useEffect(() => {
+        if (!confirmingId) return;
+        const t = setTimeout(() => setConfirmingId(null), 3000);
+        return () => clearTimeout(t);
+      }, [confirmingId]);
+
+      const q = query.trim().toLowerCase();
+      const filtered = !q ? conversations : conversations.filter(c => {
+        if ((c.title || '').toLowerCase().includes(q)) return true;
+        return (c.messages || []).some(m => (m.content || '').toLowerCase().includes(q));
+      });
+
+      return h(React.Fragment, null,
+        h('div', { className: 'absolute inset-0 bg-black/40 z-30 fade-in', onClick: onClose }),
+        h('div', { className: 'absolute left-0 top-0 bottom-0 w-72 glass-panel z-40 flex flex-col slide-in-left' },
+          // Header
+          h('div', { className: 'flex items-center justify-between px-4 py-3 border-b border-white/5 shrink-0' },
+            h('div', null,
+              h('h2', { className: 'text-lg text-ink-100', style: { fontFamily: 'Instrument Serif, serif' } }, 'Lịch sử'),
+              h('div', { className: 'text-[10px] text-ink-500' }, conversations.length, ' cuộc trò chuyện'),
+            ),
+            h('button', { onClick: onClose, className: 'text-ink-400 hover:text-ink-100 p-1 rounded' }, I.close),
+          ),
+          // Search
+          h('div', { className: 'px-3 pt-3 pb-1 shrink-0' },
+            h('input', {
+              type: 'text', value: query, onChange: e => setQuery(e.target.value),
+              placeholder: '🔍 Tìm trong tiêu đề hoặc nội dung...',
+              autoComplete: 'off', spellCheck: false,
+              className: 'w-full bg-ink-800/60 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-ink-100 placeholder-ink-500 focus:outline-none focus:border-amber-glow/40',
+            }),
+            q && h('div', { className: 'text-[10px] text-ink-500 mt-1 px-1' },
+              `${filtered.length}/${conversations.length} kết quả`),
+          ),
+          // New conversation button (always visible)
+          h('button', {
+            type: 'button',
+            onClick: (e) => { e.preventDefault(); e.stopPropagation(); onNew(); },
+            className: 'mx-3 my-2 px-3 py-2.5 bg-amber-glow text-ink-950 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition hover:brightness-110 active:scale-95 shrink-0',
+          },
+            h('span', { style: { fontSize: '18px', fontWeight: 700 } }, '+'),
+            ' Trò chuyện mới'),
+          // List
+          h('div', { className: 'flex-1 min-h-0 overflow-y-auto px-2 pb-3' },
+            filtered.length === 0
+              ? h('div', { className: 'text-center text-ink-500 text-sm py-12' },
+                  q ? `Không tìm thấy "${query}"` : 'Chưa có cuộc trò chuyện nào')
+              : filtered.map(c => {
+                  const isActive = c.id === activeConvId;
+                  const isConfirming = confirmingId === c.id;
+                  const msgCount = (c.messages && c.messages.length) || 0;
+                  return h('div', {
+                    key: c.id,
+                    className: `flex items-start gap-2 px-2 py-2 rounded-lg mb-1 transition border ${
+                      isActive ? 'bg-amber-glow/10 border-amber-glow/30' : 'border-transparent hover:bg-white/5'
+                    }`,
+                  },
+                    // Click body to select (whole row except buttons)
+                    h('div', {
+                      onClick: () => onSelect(c.id),
+                      className: 'flex items-start gap-2 flex-1 min-w-0 cursor-pointer',
+                    },
+                      h('span', { className: 'text-ink-400 mt-0.5 shrink-0' }, I.message),
+                      h('div', { className: 'flex-1 min-w-0' },
+                        h('div', { className: 'text-sm text-ink-200 truncate' }, c.title || 'Untitled'),
+                        h('div', { className: 'text-[11px] text-ink-500 mt-0.5' },
+                          new Date(c.updatedAt || Date.now()).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
+                          ' · ', msgCount, ' tin'
+                        ),
+                      ),
+                    ),
+                    // Action buttons (always visible, separated from click area)
+                    h('div', { className: 'flex items-center gap-1 shrink-0' },
+                      h('button', {
+                        type: 'button',
+                        onClick: (e) => { e.preventDefault(); e.stopPropagation(); exportConvToMarkdown(c); },
+                        className: 'p-1.5 rounded text-ink-400 hover:text-amber-glow hover:bg-white/10 transition',
+                        title: 'Xuất ra Markdown',
+                      }, h('span', { style: { fontSize: '12px' } }, '⬇')),
+                      isConfirming
+                        ? h('button', {
+                            type: 'button',
+                            onClick: (e) => {
+                              e.preventDefault(); e.stopPropagation();
+                              onDelete(c.id);
+                              setConfirmingId(null);
+                            },
+                            className: 'px-2 py-1 rounded bg-red-500 text-white text-[11px] font-bold animate-pulse',
+                            title: 'Bấm lại để xóa',
+                          }, 'Xóa?')
+                        : h('button', {
+                            type: 'button',
+                            onClick: (e) => {
+                              e.preventDefault(); e.stopPropagation();
+                              setConfirmingId(c.id);
+                            },
+                            className: 'p-1.5 rounded text-ink-400 hover:text-red-400 hover:bg-red-500/10 transition',
+                            title: 'Xóa',
+                          }, I.trash)
+                    )
+                  );
+                })
+          ),
+          // Clear all (footer)
+          conversations.length > 0 && h('div', { className: 'shrink-0 px-3 py-2 border-t border-white/5' },
+            h('button', {
+              type: 'button',
+              onClick: (e) => {
+                e.preventDefault(); e.stopPropagation();
+                if (confirmingId === '__all__') {
+                  conversations.forEach(c => onDelete(c.id));
+                  setConfirmingId(null);
+                } else {
+                  setConfirmingId('__all__');
+                }
+              },
+              className: confirmingId === '__all__'
+                ? 'w-full text-[11px] py-1.5 rounded-lg bg-red-500 text-white font-semibold animate-pulse'
+                : 'w-full text-[11px] py-1.5 rounded-lg text-ink-500 hover:text-red-400 hover:bg-red-500/10 transition',
+            }, confirmingId === '__all__' ? 'Bấm lại để xóa TẤT CẢ' : `🗑 Xóa tất cả (${conversations.length})`),
+          )
+        )
+      );
+    }
+
+    function Settings({ provider, model, apiKeys, memoryFacts, templates, theme, onTheme, onProvider, onModel, onApiKey, onAddFact, onRemoveFact, onAddTemplate, onUpdateTemplate, onRemoveTemplate, onClose }) {
+      const [tab, setTab] = useState('about');
+      const [newFact, setNewFact] = useState('');
+      const [newTmplName, setNewTmplName] = useState('');
+      const [newTmplContent, setNewTmplContent] = useState('');
+      const [editingId, setEditingId] = useState(null);
+
+      const saveTemplate = () => {
+        if (!newTmplName.trim() || !newTmplContent.trim()) return;
+        if (editingId) {
+          onUpdateTemplate(editingId, { name: newTmplName.trim(), content: newTmplContent });
+          setEditingId(null);
+        } else {
+          onAddTemplate({ name: newTmplName.trim(), content: newTmplContent });
+        }
+        setNewTmplName('');
+        setNewTmplContent('');
+      };
+
+      return h(React.Fragment, null,
+        h('div', { className: 'absolute inset-0 bg-black/50 z-30 fade-in', onClick: onClose }),
+        h('div', { className: 'absolute inset-3 glass-panel rounded-2xl z-40 flex flex-col overflow-hidden fade-in' },
+          h('div', { className: 'flex items-center justify-between px-4 py-3 border-b border-white/5' },
+            h('h2', { className: 'text-xl text-ink-100', style: { fontFamily: 'Instrument Serif, serif' } }, 'Cài đặt'),
+            h('button', { onClick: onClose, className: 'text-ink-400 hover:text-ink-100' }, I.close),
+          ),
+          h('div', { className: 'flex border-b border-white/5 px-2 overflow-x-auto' },
+            [
+              { id: 'about', label: 'Giới thiệu', icon: I.heart },
+              { id: 'theme', label: 'Giao diện', icon: I.sparkle },
+              { id: 'memory', label: 'Bộ nhớ', icon: I.brain },
+              { id: 'api', label: 'API', icon: I.key },
+              { id: 'model', label: 'Mô hình', icon: I.cpu },
+              { id: 'templates', label: 'Mẫu', icon: I.at },
+            ].map(t => h('button', {
+              key: t.id, onClick: () => setTab(t.id),
+              className: `flex items-center gap-1 px-2.5 py-2.5 text-xs border-b-2 transition whitespace-nowrap ${
+                tab === t.id ? 'border-amber-glow text-amber-glow' : 'border-transparent text-ink-400 hover:text-ink-200'
+              }`,
+            }, t.icon, t.label))
+          ),
+          h('div', { className: 'flex-1 min-h-0 overflow-y-auto p-4 selectable' },
+            tab === 'api' && h('div', { className: 'space-y-4' },
+              h('p', { className: 'text-xs text-ink-400' }, 'API key đã được cấu hình sẵn. Bạn có thể dán key của riêng bạn để override.'),
+              Object.entries(PROVIDERS).map(([id, p]) => h('div', { key: id, className: 'space-y-1.5' },
+                h('div', { className: 'flex items-center justify-between' },
+                  h('label', { className: 'text-sm font-medium text-ink-200 flex items-center gap-2' }, p.name,
+                    provider === id && h('span', { className: 'text-[10px] px-1.5 py-0.5 rounded bg-amber-glow/20 text-amber-glow' }, 'đang dùng'),
+                    apiKeys[id] && h('span', { className: 'text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-300' }, '✓ có key'),
+                  ),
+                  h('a', { href: p.keyUrl, target: '_blank', className: 'text-[11px] text-amber-glow hover:underline flex items-center gap-0.5' },
+                    'lấy key riêng', I.external),
+                ),
+                h('div', { className: 'flex gap-2' },
+                  h('input', {
+                    type: 'password',
+                    value: apiKeys[id] || '',
+                    onChange: e => onApiKey(id, e.target.value),
+                    placeholder: 'Dán key của bạn để override...',
+                    autoComplete: 'off',
+                    className: 'flex-1 bg-ink-800/60 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-ink-100 placeholder-ink-500 focus:outline-none focus:border-amber-glow/40 font-mono',
+                  }),
+                  h('button', {
+                    onClick: () => onProvider(id), disabled: provider === id,
+                    className: 'px-3 py-1.5 text-xs rounded-lg border border-white/10 text-ink-300 hover:border-amber-glow/40 hover:text-amber-glow disabled:opacity-40 transition',
+                  }, 'chọn'),
+                )
+              )),
+              h('div', { className: 'bg-ink-800/40 border border-white/5 rounded-lg p-3 text-[11px] text-ink-400 leading-relaxed' },
+                '🔒 Key mặc định đã ẩn để bảo mật. Nếu hết quota, lấy key riêng (link "lấy key riêng" bên phải) và dán vào để override.'
+              )
+            ),
+            tab === 'model' && h('div', { className: 'space-y-4' },
+              h('div', null,
+                h('label', { className: 'text-sm text-ink-200 block mb-2' }, 'Nhà cung cấp'),
+                h('div', { className: 'grid grid-cols-3 gap-2' },
+                  Object.entries(PROVIDERS).map(([id, p]) => h('button', {
+                    key: id, onClick: () => onProvider(id),
+                    className: `px-2 py-2 rounded-lg text-xs border transition ${
+                      provider === id ? 'border-amber-glow/50 bg-amber-glow/10 text-amber-glow' : 'border-white/10 text-ink-300 hover:border-white/20'
+                    }`,
+                  }, p.name))
+                ),
+              ),
+              h('div', null,
+                h('label', { className: 'text-sm text-ink-200 block mb-2' }, 'Mô hình'),
+                h('select', {
+                  value: model, onChange: e => onModel(e.target.value),
+                  className: 'w-full bg-ink-800/60 border border-white/10 rounded-lg px-3 py-2 text-sm text-ink-100 focus:outline-none focus:border-amber-glow/40',
+                }, PROVIDERS[provider].models.map(m => h('option', { key: m.id, value: m.id }, m.label))
+                )
+              ),
+              h('div', { className: 'bg-amber-glow/5 border border-amber-glow/20 rounded-lg p-3' },
+                h('p', { className: 'text-xs text-ink-300 leading-relaxed' },
+                  '💡 ', h('strong', { className: 'text-amber-glow' }, 'Gemini 2.5 Flash'),
+                  ' có context 1M token, vision, web search grounding — tốt nhất cho app này.', h('br'), h('br'),
+                  h('strong', { className: 'text-amber-glow' }, 'Web search 🌐'), ' và ', h('strong', { className: 'text-amber-glow' }, 'PDF upload'),
+                  ' chỉ hoạt động với Gemini.'
+                )
+              )
+            ),
+            tab === 'theme' && h('div', { className: 'space-y-3' },
+              h('p', { className: 'text-xs text-ink-400' }, 'Chọn giao diện. Đổi ngay, không cần restart.'),
+              h('div', { className: 'grid grid-cols-2 gap-2' },
+                [
+                  { id: 'amber', name: 'Dark Amber', emoji: '🌅', from: '#1f1d1a', to: '#161412', accent: '#f5b042' },
+                  { id: 'sakura', name: 'Sakura', emoji: '🌸', from: '#281620', to: '#1c1018', accent: '#f472b6' },
+                  { id: 'cyberpunk', name: 'Cyberpunk', emoji: '💜', from: '#0f081e', to: '#0a0516', accent: '#a78bfa' },
+                  { id: 'forest', name: 'Forest', emoji: '🌲', from: '#121a10', to: '#0c140c', accent: '#84cc16' },
+                  { id: 'mocha', name: 'Mocha', emoji: '☕', from: '#281a12', to: '#1a100a', accent: '#d97706' },
+                  { id: 'ocean', name: 'Ocean', emoji: '🌊', from: '#0c1a20', to: '#081218', accent: '#06b6d4' },
+                ].map(t => h('button', {
+                  key: t.id,
+                  onClick: () => onTheme(t.id),
+                  className: `relative rounded-xl p-3 text-left transition border-2 ${
+                    theme === t.id ? 'border-amber-glow' : 'border-white/10 hover:border-white/20'
+                  }`,
+                  style: { background: `linear-gradient(155deg, ${t.from}, ${t.to})` },
+                },
+                  h('div', { className: 'flex items-center gap-2 mb-2' },
+                    h('span', { className: 'text-xl' }, t.emoji),
+                    h('span', { className: 'text-sm font-medium text-ink-100' }, t.name),
+                  ),
+                  h('div', { className: 'flex items-center gap-1.5' },
+                    h('div', { className: 'w-5 h-5 rounded-full shrink-0', style: { background: t.accent, boxShadow: `0 0 8px ${t.accent}66` } }),
+                    h('div', { className: 'text-[10px] text-ink-400 font-mono' }, t.accent),
+                  ),
+                  theme === t.id && h('span', {
+                    className: 'absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-amber-glow text-ink-950 flex items-center justify-center text-[10px] font-bold',
+                  }, '✓')
+                ))
+              ),
+              h('div', { className: 'bg-amber-glow/5 border border-amber-glow/20 rounded-lg p-3 mt-3' },
+                h('p', { className: 'text-xs text-ink-300 leading-relaxed' },
+                  '✨ Theme đổi mọi nơi: bubble, panel, message, accent color, glow… Không restart, không tải lại.'
+                )
+              )
+            ),
+            tab === 'memory' && h('div', { className: 'space-y-3' },
+              h('p', { className: 'text-xs text-ink-400' }, 'Những điều bạn muốn AI nhớ qua mọi cuộc trò chuyện. Tự động chèn vào prompt.'),
+              h('div', { className: 'flex gap-2' },
+                h('input', {
+                  type: 'text', value: newFact, onChange: e => setNewFact(e.target.value),
+                  onKeyDown: e => { if (e.key === 'Enter' && newFact.trim()) { onAddFact(newFact.trim()); setNewFact(''); } },
+                  placeholder: 'VD: Tôi thích trả lời ngắn gọn, súc tích',
+                  className: 'flex-1 bg-ink-800/60 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-ink-100 placeholder-ink-500 focus:outline-none focus:border-amber-glow/40',
+                }),
+                h('button', {
+                  onClick: () => { if (newFact.trim()) { onAddFact(newFact.trim()); setNewFact(''); } },
+                  className: 'px-3 py-1.5 rounded-lg bg-amber-glow text-ink-950 text-sm font-medium hover:brightness-110',
+                }, I.plus),
+              ),
+              h('div', { className: 'space-y-1.5' },
+                memoryFacts.length === 0
+                  ? h('p', { className: 'text-center text-ink-500 text-sm py-6' }, 'Chưa có thông tin nào')
+                  : memoryFacts.map((f, i) => h('div', { key: i, className: 'flex items-start gap-2 px-3 py-2 bg-ink-800/40 rounded-lg group' },
+                      h('span', { className: 'text-amber-glow text-xs mt-0.5' }, (i + 1) + '.'),
+                      h('span', { className: 'flex-1 text-sm text-ink-200' }, f),
+                      h('button', { onClick: () => onRemoveFact(i), className: 'opacity-0 group-hover:opacity-100 text-ink-500 hover:text-red-400 transition' }, I.trash)
+                    ))
+              )
+            ),
+            tab === 'templates' && h('div', { className: 'space-y-3' },
+              h('p', { className: 'text-xs text-ink-400' }, 'Mẫu prompt hay dùng. Gõ ', h('span', { className: 'font-mono text-amber-glow' }, '@tên_mẫu'), ' trong chat để chèn nhanh.'),
+              h('div', { className: 'space-y-2 bg-ink-800/30 border border-white/5 rounded-lg p-3' },
+                h('input', {
+                  type: 'text', value: newTmplName, onChange: e => setNewTmplName(e.target.value),
+                  placeholder: 'tên_mẫu (chữ thường, dùng _)',
+                  className: 'w-full bg-ink-800/60 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-ink-100 placeholder-ink-500 focus:outline-none focus:border-amber-glow/40 font-mono',
+                }),
+                h('textarea', {
+                  value: newTmplContent, onChange: e => setNewTmplContent(e.target.value),
+                  placeholder: 'Nội dung prompt mẫu...',
+                  rows: 4,
+                  className: 'w-full bg-ink-800/60 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-ink-100 placeholder-ink-500 focus:outline-none focus:border-amber-glow/40 resize-none',
+                }),
+                h('div', { className: 'flex gap-2' },
+                  h('button', {
+                    onClick: saveTemplate,
+                    disabled: !newTmplName.trim() || !newTmplContent.trim(),
+                    className: 'px-3 py-1.5 rounded-lg bg-amber-glow text-ink-950 text-xs font-medium hover:brightness-110 disabled:opacity-40',
+                  }, editingId ? 'Cập nhật' : 'Thêm mẫu'),
+                  editingId && h('button', {
+                    onClick: () => { setEditingId(null); setNewTmplName(''); setNewTmplContent(''); },
+                    className: 'px-3 py-1.5 rounded-lg border border-white/10 text-ink-300 text-xs hover:border-white/20',
+                  }, 'Hủy'),
+                )
+              ),
+              h('div', { className: 'space-y-1.5' },
+                templates.length === 0
+                  ? h('p', { className: 'text-center text-ink-500 text-sm py-6' }, 'Chưa có mẫu nào')
+                  : templates.map(t => h('div', { key: t.id, className: 'flex items-start gap-2 px-3 py-2 bg-ink-800/40 rounded-lg group' },
+                      h('div', { className: 'flex-1 min-w-0' },
+                        h('div', { className: 'font-mono text-amber-glow text-xs' }, '@' + t.name),
+                        h('div', { className: 'text-[11px] text-ink-300 mt-0.5 line-clamp-2' }, t.content),
+                      ),
+                      h('div', { className: 'flex gap-1 opacity-0 group-hover:opacity-100 transition' },
+                        h('button', {
+                          onClick: () => { setEditingId(t.id); setNewTmplName(t.name); setNewTmplContent(t.content); },
+                          className: 'text-ink-500 hover:text-amber-glow text-xs',
+                        }, 'Sửa'),
+                        h('button', {
+                          onClick: () => { if (confirm(`Xóa mẫu @${t.name}?`)) onRemoveTemplate(t.id); },
+                          className: 'text-ink-500 hover:text-red-400',
+                        }, I.trash)
+                      )
+                    ))
+              )
+            ),
+            tab === 'about' && h('div', { className: 'py-4 space-y-5' },
+              h('div', { className: 'text-center' },
+                h('div', { className: 'flex items-center justify-center gap-2 text-amber-glow' },
+                  I.sparkle,
+                  h('h2', { style: { fontFamily: 'Instrument Serif, serif', fontSize: '32px', letterSpacing: '0.05em', margin: 0 } }, 'PMĐ Chat'),
+                  I.sparkle,
+                ),
+                h('p', { className: 'text-sm text-ink-400 mt-1' }, 'Floating AI Chat Assistant'),
+                h('div', { className: 'pt-3' },
+                  h('div', { className: 'text-[10px] uppercase tracking-wider text-ink-500' }, 'Made by'),
+                  h('div', { style: { fontFamily: 'Instrument Serif, serif', fontSize: '22px' }, className: 'text-ink-100' }, 'Phan Minh Đức'),
+                ),
+                h('div', { className: 'pt-3 grid grid-cols-2 gap-2 max-w-xs mx-auto text-xs text-ink-400' },
+                  h('div', { className: 'bg-ink-800/40 rounded-lg px-3 py-2' },
+                    h('div', { className: 'text-amber-glow font-medium' }, 'v1.0.0'),
+                    h('div', { className: 'text-[10px]' }, 'Phiên bản'),
+                  ),
+                  h('div', { className: 'bg-ink-800/40 rounded-lg px-3 py-2' },
+                    h('div', { className: 'text-amber-glow font-medium' }, 'Electron'),
+                    h('div', { className: 'text-[10px]' }, 'Stack'),
+                  ),
+                ),
+              ),
+
+              // ── Donate / Ủng hộ ──
+              h('div', { className: 'border-t border-white/10 pt-5' },
+                h('div', { className: 'text-center mb-3' },
+                  h('div', { className: 'text-amber-glow text-lg flex items-center justify-center gap-1.5 mb-1' },
+                    h('span', null, '☕'),
+                    h('span', { style: { fontFamily: 'Instrument Serif, serif' } }, 'Ủng hộ tác giả'),
+                  ),
+                  h('p', { className: 'text-[11px] text-ink-400 max-w-xs mx-auto' },
+                    'Nếu thấy app hữu ích, cho tác giả ly cà phê ☕ để tiếp tục phát triển nhé!'
+                  ),
+                ),
+                h('div', { className: 'flex flex-col items-center gap-3 bg-ink-800/30 border border-white/5 rounded-2xl p-3' },
+                  h('img', {
+                    src: './donate-qr.jpg',
+                    className: 'w-full max-w-[220px] rounded-xl',
+                    alt: 'Donate QR — VietinBank Phan Minh Đức',
+                  }),
+                  h('div', { className: 'text-center text-xs space-y-0.5' },
+                    h('div', { className: 'text-ink-100 font-semibold tracking-wide' }, 'PHAN MINH DUC'),
+                    h('div', { className: 'text-ink-300 font-mono select-all' }, '105872229878'),
+                    h('div', { className: 'text-[10px] text-ink-400' }, 'VietinBank · CN Khánh Hòa · PGD Nha Trang'),
+                  ),
+                  h('button', {
+                    onClick: () => {
+                      navigator.clipboard.writeText('105872229878');
+                      alert('Đã copy số tài khoản: 105872229878');
+                    },
+                    className: 'text-[11px] px-3 py-1 rounded-lg bg-amber-glow/10 border border-amber-glow/30 text-amber-glow hover:bg-amber-glow/20 transition',
+                  }, '📋 Copy số tài khoản'),
+                ),
+              ),
+
+              h('div', { className: 'pt-3 text-[11px] text-ink-500 max-w-sm mx-auto leading-relaxed text-center' },
+                'Trợ lý AI floating bubble với Gemini, Groq, OpenRouter. Tối ưu cho người Việt.'
+              ),
+              h('div', { className: 'pt-1 flex items-center justify-center gap-1 text-[11px] text-ink-500' },
+                'Crafted with ', I.heart, ' in Vietnam'
+              ),
+            )
+          )
+        )
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+  </script>
+</body>
+</html>
